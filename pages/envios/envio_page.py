@@ -1,4 +1,5 @@
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -21,8 +22,82 @@ class EnvioPage(BasePage):
             EC.any_of(
                 EC.presence_of_element_located(L.CAMPO_EMAIL_SIGNATARIO),
                 EC.presence_of_element_located(L.INCLUIR_EMAIL),
+                EC.presence_of_element_located(L.INCLUIR_EMAIL_LEGADO),
+                EC.presence_of_element_located(L.LISTA_ASSINATURA_ROW),
+                EC.presence_of_element_located(L.BOTAO_ASSINATURA),
             )
         )
+
+    def _signatario_ja_na_lista(self) -> bool:
+        for row in self.driver.find_elements(*L.LISTA_ASSINATURA_ROW):
+            if (row.text or "").strip():
+                return True
+        return False
+
+    def _fluxo_signatario_pronto(self) -> bool:
+        return self._signatario_ja_na_lista() or self.is_present(
+            L.BOTAO_ASSINATURA, timeout=3
+        )
+
+    def _clicar_incluir_email_signatario(self) -> None:
+        for locator in (L.INCLUIR_EMAIL, L.INCLUIR_EMAIL_LEGADO):
+            if self.is_present(locator, timeout=5):
+                self.scroll_into_view(locator)
+                try:
+                    self.wait_clickable(locator, timeout=20).click()
+                except Exception:
+                    self.js_click(locator)
+                self.pause(2)
+                return
+
+    def _adicionar_email_signatario(self) -> None:
+        if self._fluxo_signatario_pronto():
+            return
+
+        if not self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=15):
+            self._clicar_incluir_email_signatario()
+        if not self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=15):
+            if self._fluxo_signatario_pronto():
+                return
+            raise AssertionError("Campo de e-mail do signatário não apareceu.")
+
+        campo = self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
+        if not (campo.get_attribute("value") or "").strip():
+            self.type_text(L.CAMPO_EMAIL_SIGNATARIO, Config.USERNAME)
+            campo = self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
+
+        try:
+            campo.send_keys(Keys.TAB)
+        except Exception:
+            pass
+        self.pause(1)
+
+        for locator in (L.BTN_ADICIONAR_SIGNATARIO, L.BTN_ADICIONAR_SIGNATARIO_ALT):
+            if self.is_present(locator, timeout=5):
+                try:
+                    self.js_click(locator)
+                except Exception:
+                    self.safe_click(locator, dismiss=False)
+                self.pause(2)
+                if self._fluxo_signatario_pronto():
+                    return
+
+        try:
+            campo.send_keys(Keys.ENTER)
+        except Exception:
+            pass
+        self.pause(2)
+
+        if not self._fluxo_signatario_pronto():
+            raise AssertionError("Não foi possível adicionar o signatário por e-mail.")
+
+    def _aguardar_barra_progresso(self, timeout: int = 60) -> None:
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.invisibility_of_element_located(L.PROGRESS_BAR)
+            )
+        except Exception:
+            pass
 
     def _garantir_pagina_documento(self, url_documento: str | None = None) -> None:
         if url_documento:
@@ -138,30 +213,34 @@ class EnvioPage(BasePage):
     def incluir_signatario_por_email(self, url_documento: str | None = None) -> None:
         self._garantir_pagina_documento(url_documento)
         self._aguardar_documento_pronto()
-        if self.is_present(L.INCLUIR_EMAIL, timeout=3):
-            incluir_email = self._locator_incluir_email()
-            self.scroll_into_view(incluir_email)
-            try:
-                self.wait_clickable(incluir_email, timeout=30).click()
-            except Exception:
-                self.js_click(incluir_email)
-
-        self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
-        campo = self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
-        if not (campo.get_attribute("value") or "").strip():
-            self.type_text(L.CAMPO_EMAIL_SIGNATARIO, Config.USERNAME)
-
-        self.safe_click(L.BTN_ADICIONAR_SIGNATARIO, dismiss=False)
+        if self._fluxo_signatario_pronto():
+            return
+        self._clicar_incluir_email_signatario()
+        self._adicionar_email_signatario()
         self.wait_clickable(L.BOTAO_ASSINATURA, timeout=60)
 
     def enviar_para_assinatura(self) -> None:
         self.scroll_into_view(L.BOTAO_ASSINATURA)
         self.wait_clickable(L.BOTAO_ASSINATURA, timeout=60)
         self.safe_click(L.BOTAO_ASSINATURA, dismiss=False)
-        self.wait_visible(L.BOTAO_ENVIO_2)
-        self.scroll_into_view(L.BOTAO_ENVIO_2)
-        self.safe_click(L.BOTAO_ENVIO_2, dismiss=False)
-        self.pause(3)
+
+        WebDriverWait(self.driver, 60).until(
+            EC.any_of(
+                EC.element_to_be_clickable(L.BOTAO_ENVIO_2),
+                EC.element_to_be_clickable(L.ASSINAR),
+            )
+        )
+
+        if self.is_present(L.BOTAO_ENVIO_2, timeout=5):
+            try:
+                botao_envio = self.driver.find_element(*L.BOTAO_ENVIO_2)
+                if botao_envio.is_displayed():
+                    self.scroll_into_view(L.BOTAO_ENVIO_2)
+                    self.safe_click(L.BOTAO_ENVIO_2, dismiss=False)
+                    self.pause(3)
+            except Exception:
+                pass
+
         self.dismiss_blocking_modals()
         self.wait_clickable(L.ASSINAR, timeout=90)
 
@@ -506,40 +585,27 @@ class EnvioPage(BasePage):
     def incluir_email_para_pin(self) -> None:
         """Habilita pins no canvas (fluxo legado envio-canvas-pins.robot)."""
         self.dismiss_blocking_modals()
-        for locator in (L.INCLUIR_EMAIL_LEGADO, L.INCLUIR_EMAIL):
-            if self.is_present(locator, timeout=5):
-                self.scroll_into_view(locator)
-                self.safe_click(locator, dismiss=False)
-                break
-        else:
-            incluir = self._locator_incluir_email()
-            self.scroll_into_view(incluir)
-            self.safe_click(incluir, dismiss=False)
+        self._aguardar_canvas_documento()
 
-        self.pause(2)
-        if self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=3):
-            campo = self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
-            if not (campo.get_attribute("value") or "").strip():
-                self.type_text(L.CAMPO_EMAIL_SIGNATARIO, Config.USERNAME)
-            if self.is_present(L.BTN_ADICIONAR_SIGNATARIO, timeout=3):
-                self.safe_click(L.BTN_ADICIONAR_SIGNATARIO, dismiss=False)
-                self.pause(2)
+        if self._fluxo_signatario_pronto():
+            self._aguardar_barra_progresso()
+            return
+
+        self._clicar_incluir_email_signatario()
+        if self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=10):
+            self._adicionar_email_signatario()
+        elif not self._fluxo_signatario_pronto():
+            raise AssertionError(
+                "Não foi possível habilitar signatário para adicionar pin no canvas."
+            )
 
         try:
             WebDriverWait(self.driver, 60).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "#lista-assinatura tbody tr")
-                )
+                EC.presence_of_element_located(L.LISTA_ASSINATURA_ROW)
             )
         except Exception:
             pass
-
-        try:
-            WebDriverWait(self.driver, 60).until(
-                EC.invisibility_of_element_located(L.PROGRESS_BAR)
-            )
-        except Exception:
-            pass
+        self._aguardar_barra_progresso()
 
     def _pin_presente_canvas1(self, timeout: int = 3) -> bool:
         return self.is_present(L.PIN_1, timeout=timeout)

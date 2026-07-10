@@ -24,6 +24,7 @@ def documento_pronto_para_assinatura(context):
         or getattr(context.driver, "documento_url", None)
     )
     if url:
+        _envio(context)._garantir_pagina_documento(url)
         return
 
     LoginPage(context.driver, timeout=Config.LOGIN_TIMEOUT).fazer_login()

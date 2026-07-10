@@ -34,6 +34,12 @@ BTN_ADICIONAR_SIGNATARIO = (
     "//input[@id='email-assinatura']/ancestor::div[contains(@class,'input-group')]"
     "//button[contains(normalize-space(.), 'Adicionar')]",
 )
+BTN_ADICIONAR_SIGNATARIO_ALT = (
+    By.XPATH,
+    "//*[@id='email-assinatura']/ancestor::div[contains(@class,'input-group')]"
+    "//*[self::button or self::a or self::span][contains(normalize-space(.), 'Adicionar')]",
+)
+LISTA_ASSINATURA_ROW = (By.CSS_SELECTOR, "#lista-assinatura tbody tr")
 BOTAO_ASSINATURA = (By.XPATH, '//*[@id="enviar-para-assinatura"]')
 BOTAO_ENVIO_2 = (By.ID, "btnSalvarDocumento")
 FASE_ENVIADO = (
