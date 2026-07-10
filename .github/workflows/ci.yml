@@ -48,12 +48,14 @@ jobs:
           sed -i "s|RECORD_VIDEO=.*|RECORD_VIDEO=false|" .env
 
       - name: Run Behave tests
+        env:
+          PYTHONUNBUFFERED: "1"
         run: |
           TAGS="${{ github.event.inputs.tags }}"
           if [ -n "$TAGS" ]; then
-            behave features/ -f pretty -f html -o reports/behave_report.html --tags="$TAGS"
+            python -u -m behave features/ --no-capture -f pretty -f html -o reports/behave_report.html --tags="$TAGS"
           else
-            behave features/ -f pretty -f html -o reports/behave_report.html
+            python -u -m behave features/ --no-capture -f pretty -f html -o reports/behave_report.html
           fi
 
       - name: Upload reports
