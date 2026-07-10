@@ -1,3 +1,5 @@
+import os
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -25,6 +27,9 @@ def create_driver(config: type[Config] = Config) -> webdriver.Remote:
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-popup-blocking")
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
+        chrome_bin = os.getenv("CHROME_BIN") or os.getenv("CHROME_PATH")
+        if chrome_bin:
+            options.binary_location = chrome_bin
         driver = webdriver.Chrome(options=options)
 
     driver.set_window_size(1920, 1080)

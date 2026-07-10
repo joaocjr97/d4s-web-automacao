@@ -14,6 +14,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      CI: "true"
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -47,16 +50,35 @@ jobs:
           sed -i "s|HEADLESS=.*|HEADLESS=true|" .env
           sed -i "s|RECORD_VIDEO=.*|RECORD_VIDEO=false|" .env
 
-      - name: Run Behave tests
-        env:
-          PYTHONUNBUFFERED: "1"
+      - name: List scenarios (dry-run)
         run: |
+          echo "=== Cenários planejados ==="
+          python -u -m behave features/ --dry-run --format progress
+          echo "==========================="
+
+      - name: Run Behave tests
+        run: |
+          mkdir -p reports
           TAGS="${{ github.event.inputs.tags }}"
+          ARGS=(
+            python -u -m behave features/
+            --no-capture
+            --show-timings
+            --logging-level INFO
+            --format progress
+            --format html
+            --outfile reports/behave_report.html
+          )
           if [ -n "$TAGS" ]; then
-            python -u -m behave features/ --no-capture -f pretty -f html -o reports/behave_report.html --tags="$TAGS"
-          else
-            python -u -m behave features/ --no-capture -f pretty -f html -o reports/behave_report.html
+            ARGS+=(--tags="$TAGS")
           fi
+          echo "=== Início $(date -u +%H:%M:%S) UTC ==="
+          echo "Comando: ${ARGS[*]}"
+          set -o pipefail
+          stdbuf -oL -eL "${ARGS[@]}" 2>&1 | tee reports/behave_console.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "=== Fim $(date -u +%H:%M:%S) UTC | exit=${EXIT_CODE} ==="
+          exit "${EXIT_CODE}"
 
       - name: Upload reports
         if: always()
