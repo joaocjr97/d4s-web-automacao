@@ -1,0 +1,5 @@
+behave==1.2.6
+selenium==4.45.0
+python-dotenv==1.1.0
+behave-html-formatter==0.9.10
+allure-behave==2.13.5

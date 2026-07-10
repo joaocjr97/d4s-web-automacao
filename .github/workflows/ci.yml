@@ -1,0 +1,49 @@
+name: Web QA Tests
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env from secrets
+        env:
+          D4S_USERNAME: ${{ secrets.USERNAME }}
+          D4S_PASSWORD: ${{ secrets.PASSWORD }}
+          TOKEN_API: ${{ secrets.TOKEN_API }}
+          CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
+          EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
+        run: |
+          cp .env.exemplo .env
+          sed -i "s|D4S_USERNAME=.*|D4S_USERNAME=${D4S_USERNAME}|" .env
+          sed -i "s|D4S_PASSWORD=.*|D4S_PASSWORD=${D4S_PASSWORD}|" .env
+          sed -i "s|TOKEN_API=.*|TOKEN_API=${TOKEN_API}|" .env
+          sed -i "s|CRYPT_KEY=.*|CRYPT_KEY=${CRYPT_KEY}|" .env
+          sed -i "s|EMAIL_TESTE=.*|EMAIL_TESTE=${EMAIL_TESTE}|" .env
+          sed -i "s|HEADLESS=.*|HEADLESS=true|" .env
+
+      - name: Run Behave tests
+        run: behave -f pretty -f html -o reports/behave_report.html --tags=@smoke
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behave-reports
+          path: reports/
