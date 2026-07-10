@@ -9,6 +9,7 @@ ENV_EXAMPLE = ROOT / ".env.exemplo"
 ENV_FILE = ROOT / ".env"
 
 OVERRIDES = {
+    "ENVIRONMENT": os.environ.get("ENVIRONMENT", "prod"),
     "D4S_USERNAME": os.environ.get("D4S_USERNAME", ""),
     "D4S_PASSWORD": os.environ.get("D4S_PASSWORD", ""),
     "TOKEN_API": os.environ.get("TOKEN_API", ""),

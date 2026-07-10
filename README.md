@@ -43,7 +43,7 @@ copy .env.exemplo .env       # Windows
 cp .env.exemplo .env         # Linux/Mac
 ```
 
-Edite o `.env` com credenciais e ambiente antes de executar.
+Edite o `.env` com credenciais e ambiente de **QA** (`homol`, `ghost`, `staging` ou `hotfix`). Não use `prod` na automação.
 
 ## Executar testes
 
@@ -78,7 +78,7 @@ behave features/ -f pretty -f html -o reports/behave_report.html
 
 | Variável | Descrição |
 |----------|-----------|
-| `ENVIRONMENT` | `ghost`, `homol`, `staging`, `hotfix`, `prod` |
+| `ENVIRONMENT` | `prod` (padrão), `ghost`, `homol`, `staging`, `hotfix` |
 | `D4S_USERNAME` / `D4S_PASSWORD` | Credenciais de login |
 | `TOKEN_API` / `CRYPT_KEY` | Chaves de API |
 | `EMAIL_TESTE` | E-mail para cenários de signatário |
@@ -90,20 +90,22 @@ behave features/ -f pretty -f html -o reports/behave_report.html
 
 | Ambiente | URL |
 |----------|-----|
-| prod | https://secure.d4sign.com.br/ |
-| staging | https://stage.d4sign.com.br/ |
+| **prod** | https://secure.d4sign.com.br/ |
 | homol | https://homol.d4sign.com.br/ |
 | ghost | https://ghost.d4sign.com.br/ |
+| staging | https://stage.d4sign.com.br/ |
 | hotfix | https://hotfix.d4sign.com.br/ |
+
+## CI (GitHub Actions)
+
+Secrets: `USERNAME`, `PASSWORD`, `TOKEN_API`, `CRYPT_KEY`, `EMAIL_TESTE`
+
+Variable opcional: `ENVIRONMENT` (padrão `prod` → secure.d4sign.com.br)
+
+O workflow executa `@critical` no push e a suíte completa no disparo manual.
 
 ## Relatórios
 
 - HTML: `reports/behave_report.html`
 - Screenshots: `reports/screenshots/`
 - Evidências: `reports/videos/`
-
-## CI
-
-O workflow em `.github/workflows/ci.yml` executa os testes com tag `@smoke` em cada push/PR na branch `main`.
-
-Secrets necessários no GitHub: `USERNAME`, `PASSWORD`, `TOKEN_API`, `CRYPT_KEY`, `EMAIL_TESTE`.
