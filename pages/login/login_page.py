@@ -20,6 +20,10 @@ class LoginPage(BasePage):
     COOKIE_IDIOMA = 'document.cookie = "contratoazul_language=pt"'
 
     def abrir_pagina_login(self) -> None:
+        try:
+            self.driver.delete_all_cookies()
+        except Exception:
+            pass
         self.open(Config.login_url())
 
     def configurar_cookies_iniciais(self) -> None:

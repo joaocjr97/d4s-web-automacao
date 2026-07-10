@@ -1,5 +1,6 @@
 import time
 
+from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
@@ -25,10 +26,19 @@ class BasePage:
         return self.wait.until(EC.visibility_of_element_located(locator))
 
     def wait_clickable(
-        self, locator: tuple[str, str], timeout: int | None = None
+        self, locator: tuple[str, str], timeout: int | None = None, retries: int = 3
     ) -> WebElement:
-        wait = WebDriverWait(self.driver, timeout or self.timeout)
-        return wait.until(EC.element_to_be_clickable(locator))
+        last_error: Exception | None = None
+        for _ in range(retries):
+            try:
+                wait = WebDriverWait(self.driver, timeout or self.timeout)
+                return wait.until(EC.element_to_be_clickable(locator))
+            except StaleElementReferenceException as exc:
+                last_error = exc
+                self.pause(0.5)
+        if last_error:
+            raise last_error
+        raise TimeoutError(f"Elemento não ficou clicável: {locator}")
 
     def wait_present(self, locator: tuple[str, str]) -> WebElement:
         return self.wait.until(EC.presence_of_element_located(locator))

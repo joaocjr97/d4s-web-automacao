@@ -93,6 +93,11 @@ def after_step(context, step):
 
 def after_scenario(context, scenario):
     _ci_log(f"  OK Cenario finalizado: {scenario.name} ({scenario.status})")
+    if scenario.status == "failed":
+        try:
+            _ci_log(f"    URL: {context.driver.current_url}")
+        except Exception:
+            pass
     if scenario.status == "failed" and Config.SCREENSHOT_ON_FAIL:
         context.evidence.capture_screenshot(context.driver, scenario.name)
 

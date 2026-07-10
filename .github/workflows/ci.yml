@@ -14,6 +14,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       CI: "true"
       PYTHONUNBUFFERED: "1"
@@ -40,15 +41,10 @@ jobs:
           TOKEN_API: ${{ secrets.TOKEN_API }}
           CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
           EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
-        run: |
-          cp .env.exemplo .env
-          sed -i "s|D4S_USERNAME=.*|D4S_USERNAME=${D4S_USERNAME}|" .env
-          sed -i "s|D4S_PASSWORD=.*|D4S_PASSWORD=${D4S_PASSWORD}|" .env
-          sed -i "s|TOKEN_API=.*|TOKEN_API=${TOKEN_API}|" .env
-          sed -i "s|CRYPT_KEY=.*|CRYPT_KEY=${CRYPT_KEY}|" .env
-          sed -i "s|EMAIL_TESTE=.*|EMAIL_TESTE=${EMAIL_TESTE}|" .env
-          sed -i "s|HEADLESS=.*|HEADLESS=true|" .env
-          sed -i "s|RECORD_VIDEO=.*|RECORD_VIDEO=false|" .env
+          HEADLESS: "true"
+          RECORD_VIDEO: "false"
+          TIMEOUT: "360"
+        run: python recursos/utils/create_env_ci.py
 
       - name: List scenarios (dry-run)
         run: |
@@ -60,6 +56,9 @@ jobs:
         run: |
           mkdir -p reports
           TAGS="${{ github.event.inputs.tags }}"
+          if [ -z "$TAGS" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            TAGS="@critical"
+          fi
           ARGS=(
             python -u -m behave features/
             --no-capture

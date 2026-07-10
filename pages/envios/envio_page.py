@@ -141,7 +141,8 @@ class EnvioPage(BasePage):
         self.scroll_into_view(L.BOTAO_ENVIO_2)
         self.safe_click(L.BOTAO_ENVIO_2, dismiss=False)
         self.pause(3)
-        self.wait_clickable(L.ASSINAR, timeout=60)
+        self.dismiss_blocking_modals()
+        self.wait_clickable(L.ASSINAR, timeout=90)
 
     def _aguardar_assinatura_concluida(self, timeout: int = 90) -> None:
         try:
