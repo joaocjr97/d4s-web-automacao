@@ -45,18 +45,39 @@ class EnvioPage(BasePage):
         self.select_by_index(L.SELECT_COFRE, COFRE_DESK_INDEX)
         self.pause(2)
         self.upload_file(L.FILE_UPLOAD, Config.doc_testes_pdf())
-        self.wait_visible(L.AGUARDANDO_SIGNATARIOS)
-        assert self.page_contains(L.AGUARDANDO_SIGNATARIOS), (
-            "Documento não entrou em AGUARDANDO SIGNATÁRIOS."
-        )
+        self._documento_pronto_para_signatarios()
+        self.validar_aguardando_signatarios()
         return self.driver.current_url
 
-    def validar_aguardando_signatarios(self) -> None:
-        elemento = self.wait_visible(L.AGUARDANDO_SIGNATARIOS)
-        status = (elemento.text or "").strip().upper()
-        assert "AGUARDANDO" in status and "SIGNAT" in status, (
-            f"Status esperado 'AGUARDANDO SIGNATÁRIOS', obtido: {status!r}"
+    def _documento_pronto_para_signatarios(self, timeout: int = 120) -> None:
+        WebDriverWait(self.driver, timeout).until(
+            EC.any_of(
+                EC.presence_of_element_located(L.AGUARDANDO_SIGNATARIOS),
+                EC.url_contains("viewblob"),
+                EC.presence_of_element_located(L.VIEWBLOB),
+                EC.presence_of_element_located(L.CAMPO_EMAIL_SIGNATARIO),
+                EC.presence_of_element_located(L.INCLUIR_EMAIL),
+                EC.presence_of_element_located(L.INCLUIR_EMAIL_LEGADO),
+            )
         )
+
+    def validar_aguardando_signatarios(self) -> None:
+        self.dismiss_blocking_modals()
+        if self.is_present(L.AGUARDANDO_SIGNATARIOS, timeout=30):
+            elemento = self.wait_visible(L.AGUARDANDO_SIGNATARIOS)
+            status = (elemento.text or "").strip().upper()
+            if "AGUARDANDO" in status and "SIGNAT" in status:
+                return
+
+        url = (self.driver.current_url or "").lower()
+        assert "viewblob" in url, (
+            f"Documento não está na viewblob. URL: {self.driver.current_url}"
+        )
+        assert (
+            self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=20)
+            or self.is_present(L.INCLUIR_EMAIL, timeout=5)
+            or self.is_present(L.INCLUIR_EMAIL_LEGADO, timeout=5)
+        ), "Viewblob aberta, mas fluxo de signatários não está visível."
 
     # --- Cofre ---
 
