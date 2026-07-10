@@ -1,4 +1,4 @@
-name: Web QA Tests
+name: D4Sign Web Tests (Behave)
 on:
   push:
     branches: [main, master]

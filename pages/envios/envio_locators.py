@@ -1,11 +1,10 @@
-"""Locators migrados de resources/common/variables.robot (envios)."""
+"""Locators dos fluxos de envio da plataforma D4Sign."""
 
 from selenium.webdriver.common.by import By
 
 # Desk / upload comum
 BOTAO_ENVIO = (By.XPATH, '//*[@id="drop-zone"]/a/p[2]')
 SELECT_COFRE = (By.NAME, "uuid-cofre")
-SELECIONAR_COFRE = (By.XPATH, '//*[@id="formUpload"]/select/option[157]')
 FILE_UPLOAD = (By.ID, "fileupload")
 AGUARDANDO_SIGNATARIOS = (
     By.XPATH,
@@ -14,8 +13,6 @@ AGUARDANDO_SIGNATARIOS = (
     'contains(translate(., "signatriosá", "SIGNATRIOSÁ"), "SIGNAT")'
     ']',
 )
-# Alias legado (Robot / migração)
-AGUARDANDO_ENVIO = AGUARDANDO_SIGNATARIOS
 
 # Cofre
 COFRE_12 = (By.XPATH, '//*[@id="liCofre_1414985"]/a')
@@ -24,7 +21,6 @@ NEW_FILE = (
     By.XPATH,
     '//*[@id="page-wrapper"]/div[2]/div[2]/div[2]/div/div[1]/div[2]/ul/li[1]/a',
 )
-IA_MODAL = (By.CSS_SELECTOR, ".modal-backdrop.in")
 
 # Assinatura / envio
 INCLUIR_EMAIL = (By.XPATH, "//a[contains(normalize-space(.), 'Incluir meu')]")
@@ -52,7 +48,6 @@ SENHA_CONTA = (By.ID, "senhaConta")
 SALVAR_ASSINATURA = (By.XPATH, '//*[@id="btnSalvarAssinatura"]')
 VERIFICA_ASSINATURA = (By.XPATH, '//*[@id="viewblobdiv"]/div[2]/div[1]')
 VIEWBLOB = (By.ID, "viewblobdiv")
-LISTA_ASSINATURA = (By.ID, "lista-assinatura")
 ASSINATURA_CONCLUIDA = (
     By.XPATH,
     "//*[@id='lista-assinatura']//*[contains(translate(., 'ASSINOU', 'assinou'), 'assinou')]",
@@ -101,10 +96,8 @@ VERIFICA_ENVIO = CAMPO_EMAIL_SIGNATARIO
 LOTE = (By.XPATH, '//*[@id="page-wrapper"]/div[2]/div[1]/div[5]/a')
 BTN_LOTE = (By.ID, "btnSaveTemplate")
 CAMPO_COFRE_LOTE = (By.ID, "uuid-cofre")
-COFRE_ENVIO_LOTE = (By.XPATH, '//*[@id="uuid-cofre"]/option[2]')
 NOME_ENVIO = (By.XPATH, '//*[@id="div_up"]/input')
 TIPO_DOC = (By.XPATH, '//*[@id="div_up"]/select[4]')
-TEMP_HTML = (By.XPATH, '//*[@id="div_up"]/select[4]/option[2]')
 BTN_SALVAR_PF = (By.ID, "btnSavePf")
 BTN_OPCAO = (By.ID, "label-opcao-cofre")
 SELECIONAR_DOC = (By.XPATH, '//*[@id="contratos"]/tbody/tr[1]/td[6]/div/ul/li[4]/a')
@@ -133,9 +126,7 @@ POWERFORM = (By.XPATH, '//*[@id="page-wrapper"]/div[2]/div[1]/div[3]/div/ul/li[5
 CRIAR_POWERFORM = (By.ID, "btnSaveTemplate")
 MODAL_POWERFORM = (By.ID, "formPowerForm")
 CAMPO_COFRE_PF = (By.ID, "uuid_cofre")
-SELECIONAR_COFRE_PF = (By.XPATH, '//*[@id="uuid_cofre"]/option[2]')
 CAMPO_TEMPLATE = (By.ID, "uuid-template")
-SELECIONAR_TEMPLATE = (By.XPATH, '//*[@id="meus-templates"]/option[338]')
 NOME_DOCUMENTO = (By.ID, "nome_documento")
 BOTAO_CONTINUAR = (By.ID, "docButton")
 BTN_TOKEN = (By.XPATH, '//*[@id="tokenCount"]/button')
@@ -154,7 +145,6 @@ CANVAS_2 = (By.ID, "canvas2")
 CANVAS_3 = (By.ID, "canvas3")
 CANVAS_4 = (By.ID, "canvas4")
 BOTAO_ANEXO = (By.CSS_SELECTOR, "#id-adicionar-mais-doc, #btnNovoDoc")
-ADD_EMAIL = INCLUIR_EMAIL
 PIN_1 = (
     By.CSS_SELECTOR,
     "#pin-container-overlay-canvas1 .pin, #pin-container-for-canvas1 div img",

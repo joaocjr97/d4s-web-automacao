@@ -68,13 +68,7 @@ class Config:
 
     @classmethod
     def test_file(cls, filename: str) -> str:
-        local = cls.project_root() / "data" / "files" / filename
-        if local.exists():
-            return str(local.resolve())
-        legacy = cls.project_root().parent / "robot-D4S" / "data" / "files" / filename
-        if legacy.exists():
-            return str(legacy.resolve())
-        return str(local.resolve())
+        return str((cls.project_root() / "data" / "files" / filename).resolve())
 
     @classmethod
     def doc_testes_pdf(cls) -> str:

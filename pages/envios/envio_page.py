@@ -13,7 +13,7 @@ COFRE_PF_INDEX = 1
 
 
 class EnvioPage(BasePage):
-    """Page Object com fluxos de envio migrados do robot-D4S."""
+    """Page Object com fluxos de envio da plataforma D4Sign."""
 
     def _aguardar_documento_pronto(self, timeout: int = 60) -> None:
         self.dismiss_blocking_modals()
