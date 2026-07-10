@@ -48,7 +48,7 @@ def _limpar_sessao_navegador(context) -> None:
 
 def _ci_log(message: str) -> None:
     if os.getenv("CI", "").lower() in ("1", "true", "yes"):
-        print(message, flush=True)
+        print(message.encode("ascii", errors="replace").decode("ascii"), flush=True)
 
 
 def before_all(context):
@@ -58,23 +58,23 @@ def before_all(context):
 
 
 def before_feature(context, feature):
-    _ci_log(f"▶ Feature: {feature.name}")
+    _ci_log(f">> Feature: {feature.name}")
     context._reusar_navegador = _feature_reusa_navegador(feature)
     context._manter_sessao = _feature_mantem_sessao(feature)
     context._signature_driver = None
 
 
 def before_scenario(context, scenario):
-    _ci_log(f"  ▶ Cenário: {scenario.name}")
+    _ci_log(f"  >> Cenario: {scenario.name}")
     manter_sessao = getattr(context, "_manter_sessao", False)
     driver_salvo = getattr(context, "_signature_driver", None)
 
     if manter_sessao and driver_salvo is not None:
         context.driver = driver_salvo
     elif getattr(context, "driver", None) is None:
-        _ci_log("    … Abrindo navegador Chrome")
+        _ci_log("    ... Abrindo navegador Chrome")
         context.driver = create_driver(Config)
-        _ci_log("    ✓ Navegador pronto")
+        _ci_log("    OK Navegador pronto")
 
     if manter_sessao:
         context._signature_driver = context.driver
@@ -92,7 +92,7 @@ def after_step(context, step):
 
 
 def after_scenario(context, scenario):
-    _ci_log(f"  ✓ Cenário finalizado: {scenario.name} ({scenario.status})")
+    _ci_log(f"  OK Cenario finalizado: {scenario.name} ({scenario.status})")
     if scenario.status == "failed" and Config.SCREENSHOT_ON_FAIL:
         context.evidence.capture_screenshot(context.driver, scenario.name)
 
