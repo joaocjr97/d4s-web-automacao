@@ -5,6 +5,11 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      tags:
+        description: "Tags Behave (ex.: @smoke, @critical, @envio). Vazio = todos os cenários"
+        required: false
+        default: ""
 
 jobs:
   test:
@@ -16,6 +21,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
 
       - name: Install dependencies
         run: |
@@ -37,9 +45,16 @@ jobs:
           sed -i "s|CRYPT_KEY=.*|CRYPT_KEY=${CRYPT_KEY}|" .env
           sed -i "s|EMAIL_TESTE=.*|EMAIL_TESTE=${EMAIL_TESTE}|" .env
           sed -i "s|HEADLESS=.*|HEADLESS=true|" .env
+          sed -i "s|RECORD_VIDEO=.*|RECORD_VIDEO=false|" .env
 
       - name: Run Behave tests
-        run: behave -f pretty -f html -o reports/behave_report.html --tags=@smoke
+        run: |
+          TAGS="${{ github.event.inputs.tags }}"
+          if [ -n "$TAGS" ]; then
+            behave features/ -f pretty -f html -o reports/behave_report.html --tags="$TAGS"
+          else
+            behave features/ -f pretty -f html -o reports/behave_report.html
+          fi
 
       - name: Upload reports
         if: always()
