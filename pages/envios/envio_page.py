@@ -34,8 +34,13 @@ class EnvioPage(BasePage):
                 return True
         return False
 
-    def _fluxo_signatario_pronto(self) -> bool:
-        return self._signatario_ja_na_lista() or self.is_present(
+    def _aguardar_signatario_na_lista(self, timeout: int = 60) -> None:
+        WebDriverWait(self.driver, timeout).until(
+            lambda driver: self._signatario_ja_na_lista()
+        )
+
+    def _pronto_para_enviar_assinatura(self) -> bool:
+        return self._signatario_ja_na_lista() and self.is_present(
             L.BOTAO_ASSINATURA, timeout=3
         )
 
@@ -51,13 +56,13 @@ class EnvioPage(BasePage):
                 return
 
     def _adicionar_email_signatario(self) -> None:
-        if self._fluxo_signatario_pronto():
+        if self._signatario_ja_na_lista():
             return
 
         if not self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=15):
             self._clicar_incluir_email_signatario()
         if not self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=15):
-            if self._fluxo_signatario_pronto():
+            if self._signatario_ja_na_lista():
                 return
             raise AssertionError("Campo de e-mail do signatário não apareceu.")
 
@@ -79,7 +84,8 @@ class EnvioPage(BasePage):
                 except Exception:
                     self.safe_click(locator, dismiss=False)
                 self.pause(2)
-                if self._fluxo_signatario_pronto():
+                if self._signatario_ja_na_lista():
+                    self._aguardar_barra_progresso()
                     return
 
         try:
@@ -87,8 +93,9 @@ class EnvioPage(BasePage):
         except Exception:
             pass
         self.pause(2)
+        self._aguardar_barra_progresso()
 
-        if not self._fluxo_signatario_pronto():
+        if not self._signatario_ja_na_lista():
             raise AssertionError("Não foi possível adicionar o signatário por e-mail.")
 
     def _aguardar_barra_progresso(self, timeout: int = 60) -> None:
@@ -213,11 +220,26 @@ class EnvioPage(BasePage):
     def incluir_signatario_por_email(self, url_documento: str | None = None) -> None:
         self._garantir_pagina_documento(url_documento)
         self._aguardar_documento_pronto()
-        if self._fluxo_signatario_pronto():
+        if self._signatario_ja_na_lista():
             return
         self._clicar_incluir_email_signatario()
         self._adicionar_email_signatario()
         self.wait_clickable(L.BOTAO_ASSINATURA, timeout=60)
+
+    def _abrir_modal_assinatura(self) -> None:
+        self.dismiss_blocking_modals()
+        self.scroll_into_view(L.ASSINAR)
+        for tentativa in range(3):
+            try:
+                self.wait_clickable(L.ASSINAR, timeout=20).click()
+            except Exception:
+                self.js_click(L.ASSINAR)
+            self.pause(2)
+            if self.is_present(L.SENHA_CONTA, timeout=5):
+                self.wait_visible(L.SENHA_CONTA)
+                return
+            self.dismiss_blocking_modals()
+        self.wait_visible(L.SENHA_CONTA, timeout=30)
 
     def enviar_para_assinatura(self) -> None:
         self.scroll_into_view(L.BOTAO_ASSINATURA)
@@ -263,11 +285,7 @@ class EnvioPage(BasePage):
         )
 
     def assinar_documento(self) -> None:
-        self.scroll_into_view(L.ASSINAR)
-        self.safe_click(L.ASSINAR, dismiss=False)
-        WebDriverWait(self.driver, 60).until(
-            EC.visibility_of_element_located(L.SENHA_CONTA)
-        )
+        self._abrir_modal_assinatura()
         self.type_text(L.SENHA_CONTA, Config.PASSWORD)
         self.safe_click(L.SALVAR_ASSINATURA, dismiss=False)
         self._aguardar_assinatura_concluida()
@@ -566,6 +584,8 @@ class EnvioPage(BasePage):
 
     def adicionar_e_validar_pins(self) -> None:
         self.incluir_signatario_por_email()
+        self._aguardar_signatario_na_lista()
+        self._aguardar_barra_progresso()
         self.pause(2)
         self._clicar_canvas_para_adicionar_pin()
         self._aguardar_pin_canvas1()
@@ -587,24 +607,19 @@ class EnvioPage(BasePage):
         self.dismiss_blocking_modals()
         self._aguardar_canvas_documento()
 
-        if self._fluxo_signatario_pronto():
+        if self._signatario_ja_na_lista():
             self._aguardar_barra_progresso()
             return
 
         self._clicar_incluir_email_signatario()
         if self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=10):
             self._adicionar_email_signatario()
-        elif not self._fluxo_signatario_pronto():
+        elif not self._signatario_ja_na_lista():
             raise AssertionError(
                 "Não foi possível habilitar signatário para adicionar pin no canvas."
             )
 
-        try:
-            WebDriverWait(self.driver, 60).until(
-                EC.presence_of_element_located(L.LISTA_ASSINATURA_ROW)
-            )
-        except Exception:
-            pass
+        self._aguardar_signatario_na_lista()
         self._aguardar_barra_progresso()
 
     def _pin_presente_canvas1(self, timeout: int = 3) -> bool:
@@ -641,22 +656,29 @@ class EnvioPage(BasePage):
         )
 
     def _clicar_canvas_para_adicionar_pin(self) -> None:
+        from selenium.webdriver.common.action_chains import ActionChains
+
         self.scroll_into_view(L.CANVAS_1)
         self.execute_script("window.scrollTo(0, 0);")
-        self.pause(1)
+        self.pause(2)
 
         canvas = self.wait_visible(L.CANVAS_1)
         if not canvas.is_enabled():
             raise AssertionError("Canvas do documento não está habilitado para clique.")
 
-        for offset_x, offset_y in ((300, 600), (150, 150), (100, 100), (200, 400)):
-            self._clicar_canvas_posicao(offset_x, offset_y)
+        for offset_x, offset_y in ((300, 600), (150, 150), (200, 400), (100, 100)):
+            try:
+                ActionChains(self.driver).move_to_element_with_offset(
+                    canvas, offset_x, offset_y
+                ).click().perform()
+            except Exception:
+                self._clicar_canvas_posicao(offset_x, offset_y)
             self.pause(2)
             if self._pin_presente_canvas1(timeout=3):
                 return
 
         try:
-            self.click_at_coordinates(L.CANVAS_1, 100, 100)
+            self.click_at_coordinates(L.CANVAS_1, 300, 600)
         except Exception:
             pass
         self.pause(2)
@@ -665,5 +687,6 @@ class EnvioPage(BasePage):
         self.enviar_documento_pelo_cofre()
         self._aguardar_canvas_documento()
         self.incluir_email_para_pin()
+        self.pause(2)
         self._clicar_canvas_para_adicionar_pin()
-        self._aguardar_pin_canvas1()
+        self._aguardar_pin_canvas1(timeout=90)
