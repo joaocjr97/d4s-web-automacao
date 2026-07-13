@@ -64,59 +64,121 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]+", "-", text).strip("-").lower() or "cenario"
 
 
-def carregar_cenarios() -> list[dict]:
-    if not JSON_REPORT.exists():
-        raise FileNotFoundError(f"Relatório não encontrado: {JSON_REPORT}")
+CONSOLE_LOG = REPORTS / "behave_console.log"
 
-    data = json.loads(JSON_REPORT.read_text(encoding="utf-8"))
+
+def _parse_status_from_console() -> list[dict]:
+    """Fallback quando o JSON não foi gerado corretamente."""
+    if not CONSOLE_LOG.exists():
+        return []
+
+    texto = CONSOLE_LOG.read_text(encoding="utf-8", errors="replace")
     cenarios: list[dict] = []
+    feature_atual = "Feature"
 
-    for feature in data:
-        feature_name = feature.get("name") or "Feature"
-        filename = feature.get("location", "").split(":")[0]
-        categoria = _categoria(feature_name, filename)
+    for linha in texto.splitlines():
+        feature_match = re.search(r">> Feature:\s*(.+)$", linha)
+        if feature_match:
+            feature_atual = feature_match.group(1).strip()
+            continue
 
-        for element in feature.get("elements", []):
-            if element.get("type") not in {"scenario", "scenario_outline"}:
-                continue
+        cenario_match = re.search(
+            r"OK Cenario finalizado:\s*(.+?)\s*\(Status\.(\w+)\)",
+            linha,
+        )
+        if not cenario_match:
+            continue
 
-            status = (element.get("status") or "unknown").lower()
-            steps = []
-            duration = 0.0
-            erro = ""
-
-            for step in element.get("steps", []) or []:
-                step_status = (step.get("result") or {}).get("status", "unknown")
-                step_duration = _duracao(step.get("result"))
-                duration += step_duration
-                keyword = step.get("keyword", "").strip()
-                name = step.get("name", "").strip()
-                steps.append(
-                    {
-                        "status": step_status,
-                        "texto": f"{keyword} {name}".strip(),
-                        "duracao": step_duration,
-                    }
-                )
-                if step_status == "failed" and not erro:
-                    erro = ((step.get("result") or {}).get("error_message") or "").strip()
-
-            tags = [t.get("name", t) if isinstance(t, dict) else str(t) for t in element.get("tags", [])]
-            cenarios.append(
-                {
-                    "feature": feature_name,
-                    "categoria": categoria,
-                    "nome": element.get("name") or "Cenário",
-                    "status": status,
-                    "duracao": duration,
-                    "tags": tags,
-                    "steps": steps,
-                    "erro": erro,
-                    "arquivo": filename,
-                }
-            )
-
+        nome = cenario_match.group(1).strip()
+        status = cenario_match.group(2).strip().lower()
+        cenarios.append(
+            {
+                "feature": feature_atual,
+                "categoria": _categoria(feature_atual, ""),
+                "nome": nome,
+                "status": status,
+                "duracao": 0.0,
+                "tags": [],
+                "steps": [],
+                "erro": "",
+                "arquivo": "",
+            }
+        )
     return cenarios
+
+
+def carregar_cenarios() -> list[dict]:
+    if JSON_REPORT.exists() and JSON_REPORT.stat().st_size > 0:
+        raw = JSON_REPORT.read_text(encoding="utf-8").strip()
+        if raw:
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                print(f"JSON inválido ({exc}); usando fallback do console.", file=sys.stderr)
+                data = None
+            if data is not None:
+                cenarios: list[dict] = []
+                for feature in data:
+                    feature_name = feature.get("name") or "Feature"
+                    filename = feature.get("location", "").split(":")[0]
+                    categoria = _categoria(feature_name, filename)
+
+                    for element in feature.get("elements", []):
+                        if element.get("type") not in {"scenario", "scenario_outline"}:
+                            continue
+
+                        status = (element.get("status") or "unknown").lower()
+                        steps = []
+                        duration = 0.0
+                        erro = ""
+
+                        for step in element.get("steps", []) or []:
+                            step_status = (step.get("result") or {}).get(
+                                "status", "unknown"
+                            )
+                            step_duration = _duracao(step.get("result"))
+                            duration += step_duration
+                            keyword = step.get("keyword", "").strip()
+                            name = step.get("name", "").strip()
+                            steps.append(
+                                {
+                                    "status": step_status,
+                                    "texto": f"{keyword} {name}".strip(),
+                                    "duracao": step_duration,
+                                }
+                            )
+                            if step_status == "failed" and not erro:
+                                erro = (
+                                    (step.get("result") or {}).get("error_message") or ""
+                                ).strip()
+
+                        tags = [
+                            t.get("name", t) if isinstance(t, dict) else str(t)
+                            for t in element.get("tags", [])
+                        ]
+                        cenarios.append(
+                            {
+                                "feature": feature_name,
+                                "categoria": categoria,
+                                "nome": element.get("name") or "Cenário",
+                                "status": status,
+                                "duracao": duration,
+                                "tags": tags,
+                                "steps": steps,
+                                "erro": erro,
+                                "arquivo": filename,
+                            }
+                        )
+                if cenarios:
+                    return cenarios
+
+    fallback = _parse_status_from_console()
+    if fallback:
+        return fallback
+
+    raise FileNotFoundError(
+        "Não foi possível ler reports/behave.json nem reports/behave_console.log"
+    )
 
 
 def gerar_markdown(cenarios: list[dict]) -> str:

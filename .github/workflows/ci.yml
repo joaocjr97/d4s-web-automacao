@@ -62,26 +62,30 @@ jobs:
           if [ -z "$TAGS" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
             TAGS="@critical"
           fi
-          ARGS=(
+          # Behave associa cada --format ao --outfile na mesma ordem.
+          # progress precisa de "-" (stdout); senão o JSON fica vazio.
+          CMD=(
             python -u -m behave features/
             --no-capture
             --show-timings
             --logging-level INFO
-            --format progress
-            --format html
-            --outfile reports/behave_report.html
-            --format json
-            --outfile reports/behave.json
+            --format progress --outfile -
+            --format html --outfile reports/behave_report.html
+            --format json.pretty --outfile reports/behave.json
           )
           if [ -n "$TAGS" ]; then
-            ARGS+=(--tags="$TAGS")
+            CMD+=(--tags="$TAGS")
           fi
           echo "=== Início $(date -u +%H:%M:%S) UTC ==="
-          echo "Comando: ${ARGS[*]}"
+          echo "Comando: ${CMD[*]}"
           set -o pipefail
-          stdbuf -oL -eL "${ARGS[@]}" 2>&1 | tee reports/behave_console.log
+          stdbuf -oL -eL "${CMD[@]}" 2>&1 | tee reports/behave_console.log
           EXIT_CODE=${PIPESTATUS[0]}
           echo "=== Fim $(date -u +%H:%M:%S) UTC | exit=${EXIT_CODE} ==="
+          ls -la reports/ || true
+          if [ ! -s reports/behave.json ]; then
+            echo "AVISO: reports/behave.json vazio ou ausente"
+          fi
           echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
           exit "${EXIT_CODE}"
 
