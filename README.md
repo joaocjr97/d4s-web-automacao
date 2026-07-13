@@ -110,6 +110,8 @@ Após a execução, a aba **Summary** do job exibe um relatório Markdown com:
 - passos por cenário
 - link para o artefato `behave-reports`
 
+O artefato `behave-reports` inclui HTML, JSON, log, `screenshots/` (falhas) e `videos/` (evidência visual do cenário).
+
 ## Relatórios
 
 - Job Summary: aba Summary do GitHub Actions

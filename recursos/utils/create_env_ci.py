@@ -16,7 +16,7 @@ OVERRIDES = {
     "CRYPT_KEY": os.environ.get("CRYPT_KEY", ""),
     "EMAIL_TESTE": os.environ.get("EMAIL_TESTE", ""),
     "HEADLESS": os.environ.get("HEADLESS", "true"),
-    "RECORD_VIDEO": os.environ.get("RECORD_VIDEO", "false"),
+    "RECORD_VIDEO": os.environ.get("RECORD_VIDEO", "true"),
     "TIMEOUT": os.environ.get("TIMEOUT", "360"),
 }
 

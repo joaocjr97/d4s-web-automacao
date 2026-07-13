@@ -43,7 +43,7 @@ jobs:
           CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
           EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
           HEADLESS: "true"
-          RECORD_VIDEO: "false"
+          RECORD_VIDEO: "true"
           TIMEOUT: "360"
         run: python recursos/utils/create_env_ci.py
 
