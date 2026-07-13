@@ -104,8 +104,16 @@ Variable opcional: `ENVIRONMENT` (padrão `prod` → secure.d4sign.com.br)
 
 O workflow executa `@critical` no push e a suíte completa no disparo manual.
 
+Após a execução, a aba **Summary** do job exibe um relatório Markdown com:
+- total de passed/failed/skipped
+- tabela por categoria
+- passos por cenário
+- link para o artefato `behave-reports`
+
 ## Relatórios
 
+- Job Summary: aba Summary do GitHub Actions
 - HTML: `reports/behave_report.html`
+- JSON: `reports/behave.json`
 - Screenshots: `reports/screenshots/`
 - Evidências: `reports/videos/`

@@ -54,6 +54,8 @@ jobs:
           echo "==========================="
 
       - name: Run Behave tests
+        id: behave
+        continue-on-error: true
         run: |
           mkdir -p reports
           TAGS="${{ github.event.inputs.tags }}"
@@ -68,6 +70,8 @@ jobs:
             --format progress
             --format html
             --outfile reports/behave_report.html
+            --format json
+            --outfile reports/behave.json
           )
           if [ -n "$TAGS" ]; then
             ARGS+=(--tags="$TAGS")
@@ -78,7 +82,12 @@ jobs:
           stdbuf -oL -eL "${ARGS[@]}" 2>&1 | tee reports/behave_console.log
           EXIT_CODE=${PIPESTATUS[0]}
           echo "=== Fim $(date -u +%H:%M:%S) UTC | exit=${EXIT_CODE} ==="
+          echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
           exit "${EXIT_CODE}"
+
+      - name: Generate Job Summary
+        if: always()
+        run: python recursos/utils/generate_job_summary.py
 
       - name: Upload reports
         if: always()
@@ -86,3 +95,11 @@ jobs:
         with:
           name: behave-reports
           path: reports/
+
+      - name: Fail if tests failed
+        if: always()
+        run: |
+          if [ "${{ steps.behave.outcome }}" != "success" ]; then
+            echo "Testes Behave falharam."
+            exit 1
+          fi

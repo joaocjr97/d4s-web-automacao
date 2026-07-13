@@ -131,20 +131,28 @@ class BasePage:
             "#modal-aviso-analizer button.close",
         ):
             for element in self.driver.find_elements(By.CSS_SELECTOR, selector):
-                if element.is_displayed():
+                try:
+                    if not element.is_displayed():
+                        continue
+                    element.click()
+                except Exception:
                     try:
-                        element.click()
-                    except Exception:
                         self.execute_script("arguments[0].click();", element)
+                    except Exception:
+                        pass
 
         upload_aberto = self.is_present(self.FORM_UPLOAD, timeout=1)
         if not upload_aberto:
             for element in self.driver.find_elements(By.CSS_SELECTOR, ".modal-backdrop.in"):
-                if element.is_displayed():
+                try:
+                    if not element.is_displayed():
+                        continue
+                    element.click()
+                except Exception:
                     try:
-                        element.click()
-                    except Exception:
                         self.execute_script("arguments[0].click();", element)
+                    except Exception:
+                        pass
 
     def dismiss_modals_if_present(self) -> None:
         """Alias mantido para compatibilidade."""
