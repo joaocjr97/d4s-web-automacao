@@ -6,7 +6,7 @@ Funcionalidade: Envio pelo cofre
   Para visualizar na viewblob
 
   @envio @ui @signature @critical
-  Cenário: Envio
+  Cenário: Envio de documento pelo cofre
     Dado que estou logado na plataforma D4Sign
     Quando envio um documento pelo cofre
     Então o documento deve estar aguardando signatários

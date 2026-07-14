@@ -6,7 +6,7 @@ Funcionalidade: Envio em lote
   Para automatizar múltiplos documentos
 
   @envio @ui @batch @regression
-  Cenário: Envio em Lote
+  Cenário: Processamento de lote com planilha Excel
     Dado que estou logado na plataforma D4Sign
     Quando preparo e envio um lote com planilha Excel
     Então o lote deve ser processado com sucesso

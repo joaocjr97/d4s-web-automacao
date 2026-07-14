@@ -6,7 +6,7 @@ Funcionalidade: PowerForm
   Para documentos a preencher
 
   @envio @ui @regression
-  Cenário: Preparação do PowerForm
+  Cenário: Preparação e envio do PowerForm
     Dado que estou logado na plataforma D4Sign
     Quando preparo e envio um PowerForm
     Então o PowerForm deve ser enviado com sucesso

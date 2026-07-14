@@ -6,7 +6,7 @@ Funcionalidade: Canvas e pins
   Para validar posicionamento de assinatura
 
   @envio @ui @signature @critical
-  Cenário: Envio
+  Cenário: Adição de pin pelo canvas
     Dado que estou logado na plataforma D4Sign
     Quando envio documento pelo cofre e adiciono pin no canvas
     Então o pin deve estar visível no canvas

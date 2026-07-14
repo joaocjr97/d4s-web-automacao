@@ -6,7 +6,7 @@ Funcionalidade: Envio via desk
   Para visualizar na viewblob
 
   @envio @ui @signature @critical
-  Cenário: Envio
+  Cenário: Envio de documento pela desk
     Dado que estou logado na plataforma D4Sign
     Quando envio um documento pela desk para assinatura
     Então o documento deve estar aguardando signatários
