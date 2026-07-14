@@ -1,5 +1,9 @@
 import os
 import sys
+
+# Evita a criação de pastas __pycache__ ao rodar a suíte.
+sys.dont_write_bytecode = True
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
