@@ -60,10 +60,6 @@ def _categoria(feature_name: str, filename: str) -> str:
     return "Outros"
 
 
-def _slug(text: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9_-]+", "-", text).strip("-").lower() or "cenario"
-
-
 CONSOLE_LOG = REPORTS / "behave_console.log"
 
 

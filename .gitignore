@@ -2,9 +2,13 @@
 venv/
 .venv/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .pytest_cache/
+.idea/
+.vscode/
 reports/*
 !reports/.gitkeep
 .DS_Store
 *.log
+Thumbs.db

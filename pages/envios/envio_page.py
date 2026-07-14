@@ -39,11 +39,6 @@ class EnvioPage(BasePage):
             lambda driver: self._signatario_ja_na_lista()
         )
 
-    def _pronto_para_enviar_assinatura(self) -> bool:
-        return self._signatario_ja_na_lista() and self.is_present(
-            L.BOTAO_ASSINATURA, timeout=3
-        )
-
     def _clicar_incluir_email_signatario(self) -> None:
         for locator in (L.INCLUIR_EMAIL, L.INCLUIR_EMAIL_LEGADO):
             if self.is_present(locator, timeout=5):
@@ -111,12 +106,6 @@ class EnvioPage(BasePage):
             self.open(url_documento)
             self.dismiss_blocking_modals()
             self.pause(2)
-
-    def _locator_incluir_email(self) -> tuple[str, str]:
-        for locator in (L.INCLUIR_EMAIL, L.INCLUIR_EMAIL_LEGADO):
-            if self.is_present(locator, timeout=2):
-                return locator
-        return L.INCLUIR_EMAIL
 
     # --- Desk ---
 
