@@ -118,4 +118,5 @@ O artefato `behave-reports` inclui HTML, JSON, log, `screenshots/` (falhas) e `v
 - HTML: `reports/behave_report.html`
 - JSON: `reports/behave.json`
 - Screenshots: `reports/screenshots/`
+- Vídeos MP4: `reports/videos/` (frames capturados a cada step com `RECORD_VIDEO=true`)
 - Evidências: `reports/videos/`

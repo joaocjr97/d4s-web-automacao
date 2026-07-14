@@ -87,6 +87,11 @@ def before_scenario(context, scenario):
 
 
 def after_step(context, step):
+    if Config.RECORD_VIDEO:
+        try:
+            context.evidence.capture_frame(context.driver)
+        except Exception:
+            pass
     if step.status == "failed" and Config.SCREENSHOT_ON_FAIL:
         context.evidence.capture_screenshot(context.driver, step.name)
 
