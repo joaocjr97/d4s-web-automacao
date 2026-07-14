@@ -155,6 +155,18 @@ def validar_documento_reaproveitado(context):
     _salvar_url_documento(context, context.driver.current_url)
 
 
+# --- Substituição de documento ---
+
+@when("substituo o arquivo do documento")
+def substituir_documento(context):
+    context.url_documento_original = _envio(context).substituir_documento()
+
+
+@then("o documento deve exibir o novo arquivo aguardando signatários")
+def validar_documento_substituido(context):
+    _envio(context).validar_documento_substituido(context.url_documento_original)
+
+
 # --- Template HTML ---
 
 @when("preencho e salvo um template HTML no cofre")

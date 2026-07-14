@@ -381,6 +381,42 @@ class EnvioPage(BasePage):
         self._documento_pronto_para_signatarios()
         self.validar_aguardando_signatarios()
 
+    # --- Substituição de documento ---
+
+    def substituir_documento(self) -> str:
+        """Substitui o arquivo do documento aberto na viewblob; retorna a URL."""
+        url_documento = self.driver.current_url
+        self.dismiss_blocking_modals()
+        self.scroll_into_view(L.BTN_SUBSTITUIR_DOC)
+        self.safe_click(L.BTN_SUBSTITUIR_DOC, dismiss=False)
+        self.wait_present(L.FILE_SUBSTITUIR)
+        self.upload_file(L.FILE_SUBSTITUIR, Config.doc_substituto_pdf())
+        self.wait_visible(L.MSG_SUBSTITUICAO_SUCESSO)
+        return url_documento
+
+    def validar_documento_substituido(self, url_documento: str) -> None:
+        # A página recarrega sozinha após o sucesso, fechando o modal.
+        try:
+            WebDriverWait(self.driver, 60).until(
+                EC.invisibility_of_element_located(L.MSG_SUBSTITUICAO_SUCESSO)
+            )
+        except Exception:
+            self.reload()
+
+        nome_novo = (
+            By.XPATH,
+            "//*[contains(normalize-space(text()), 'doc-substituto')]",
+        )
+        WebDriverWait(self.driver, 90).until(
+            EC.presence_of_element_located(nome_novo)
+        )
+        assert self.driver.current_url == url_documento, (
+            "A substituição deveria manter o mesmo documento (mesma URL). "
+            f"Antes: {url_documento} | Depois: {self.driver.current_url}"
+        )
+        self.dismiss_blocking_modals()
+        self.validar_aguardando_signatarios()
+
     # --- Template HTML ---
 
     def preencher_template_html(self) -> str:

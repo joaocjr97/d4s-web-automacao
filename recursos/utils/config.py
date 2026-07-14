@@ -75,6 +75,10 @@ class Config:
         return cls.test_file("doc-testes.pdf")
 
     @classmethod
+    def doc_substituto_pdf(cls) -> str:
+        return cls.test_file("doc-substituto.pdf")
+
+    @classmethod
     def planilha_lote_xlsx(cls) -> str:
         return cls.test_file("planilha.xlsx")
 

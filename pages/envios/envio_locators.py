@@ -173,6 +173,16 @@ MSG_REAPROVEITAMENTO_SUCESSO = (
     "and contains(., 'sucesso')]",
 )
 
+# Substituição de documento
+BTN_SUBSTITUIR_DOC = (By.ID, "substitute_doc")
+FILE_SUBSTITUIR = (By.ID, "filereupload")
+MSG_SUBSTITUICAO_SUCESSO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]//*["
+    "contains(translate(., 'SUBSTIUDO', 'substiudo'), 'substituído') "
+    "and contains(., 'sucesso')]",
+)
+
 # Pin / canvas
 CARREGANDO_DOCUMENTO = (By.XPATH, '//*[@id="doc-div-principal"]/div/img')
 CARREGANDO_ANEXO = (By.XPATH, '//*[@id="progress"]/div')
