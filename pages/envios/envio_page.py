@@ -757,6 +757,39 @@ class EnvioPage(BasePage):
             pass
         self.pause(2)
 
+    TIPOS_PIN = {"assinatura": "0", "rubrica": "1", "selo": "2"}
+
+    def _valor_tipo_pin(self, tipo: str) -> str:
+        valor = self.TIPOS_PIN.get(tipo.strip().lower())
+        if valor is None:
+            raise AssertionError(f"Tipo de pin desconhecido: {tipo!r}")
+        return valor
+
+    def alterar_tipo_pin(self, tipo: str) -> None:
+        valor = self._valor_tipo_pin(tipo)
+        self._clicar_botao_pin(L.BTN_TIPO_PIN)
+        opcao = (
+            By.CSS_SELECTOR,
+            "#pin-container-overlay-canvas1 .custom-select-options "
+            f"li[data-value='{valor}']",
+        )
+        self.wait_visible(opcao)
+        try:
+            self.wait_clickable(opcao, timeout=10).click()
+        except Exception:
+            self.js_click(opcao)
+        self.pause(2)
+
+    def validar_tipo_pin(self, tipo: str) -> None:
+        valor = self._valor_tipo_pin(tipo)
+        WebDriverWait(self.driver, 30).until(
+            lambda driver: (
+                driver.find_element(*L.PIN_ELEMENTO).get_attribute("data-type")
+                == valor
+            ),
+            f"Pin não mudou para o tipo {tipo!r}.",
+        )
+
     def enviar_e_adicionar_pin_no_canvas(self) -> None:
         self.enviar_documento_pelo_cofre()
         self._aguardar_canvas_documento()

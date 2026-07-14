@@ -219,6 +219,15 @@ BTN_REMOVER_PIN = (
     "#pin-container-overlay-canvas1 button[data-action='remover-todos'], "
     "#pin-container-for-canvas1 div div:nth-child(3) button:nth-child(2)",
 )
+PIN_ELEMENTO = (By.CSS_SELECTOR, "#pin-container-overlay-canvas1 .pin")
+BTN_TIPO_PIN = (
+    By.CSS_SELECTOR,
+    "#pin-container-overlay-canvas1 button[data-action='toggle-type-select']",
+)
+OPCAO_TIPO_PIN = (
+    By.CSS_SELECTOR,
+    "#pin-container-overlay-canvas1 .custom-select-options li",
+)
 CHECKBOX_DOC = (By.ID, "input-doc-div-main")
 CHECKBOX_ANEXO = (By.ID, "nomeDocumento")
 BTN_MODAL_PINS = (By.ID, "selectAdditionals")

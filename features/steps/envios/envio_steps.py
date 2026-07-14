@@ -244,6 +244,18 @@ def validar_pins_removidos(context):
         assert not page.is_present(pin)
 
 
+# --- Tipos de pin ---
+
+@when('altero o tipo do pin para "{tipo}"')
+def alterar_tipo_pin(context, tipo):
+    _envio(context).alterar_tipo_pin(tipo)
+
+
+@then('o pin deve ser do tipo "{tipo}"')
+def validar_tipo_pin(context, tipo):
+    _envio(context).validar_tipo_pin(tipo)
+
+
 # --- Canvas pins ---
 
 @when("envio documento pelo cofre e adiciono pin no canvas")
