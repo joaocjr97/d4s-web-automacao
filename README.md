@@ -10,7 +10,8 @@ Repositório: [Auditeste-Lab/d4sign-web-tests-behave](https://github.com/Audites
 |------|---------|----------|
 | Login | `features/login/login.feature` | 7 |
 | Envios | desk, cofre, assinatura, grupo, template HTML, lote, powerform, pin, canvas, reaproveitamento, substituição, tipos de pin | 17 |
-| **Total** | 13 features | **24** |
+| Erros de envio | limite 20MB, sem signatário, e-mail inválido, senha incorreta | 4 |
+| **Total** | 14 features | **28** |
 
 ## Estrutura
 

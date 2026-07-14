@@ -155,6 +155,48 @@ def validar_documento_reaproveitado(context):
     _salvar_url_documento(context, context.driver.current_url)
 
 
+# --- Cenários de erro ---
+
+@when("tento enviar pela desk um arquivo maior que o limite")
+def upload_acima_do_limite(context):
+    _envio(context).tentar_upload_acima_do_limite()
+
+
+@then("devo ver o aviso de limite de 20MB por documento")
+def validar_limite_upload(context):
+    _envio(context).validar_erro_limite_upload()
+
+
+@when("tento enviar para assinatura sem adicionar signatário")
+def enviar_sem_signatario(context):
+    _envio(context).tentar_enviar_sem_signatario()
+
+
+@then("devo ver o aviso para adicionar pelo menos um signatário")
+def validar_aviso_sem_signatario(context):
+    _envio(context).validar_aviso_sem_signatario()
+
+
+@when('adiciono signatário com e-mail "{email}"')
+def adicionar_signatario_invalido(context, email):
+    _envio(context).adicionar_signatario_com_email(email)
+
+
+@then("nenhum signatário deve ser adicionado à lista")
+def validar_nenhum_signatario(context):
+    _envio(context).validar_nenhum_signatario_adicionado()
+
+
+@when("adiciono signatário e tento assinar com senha incorreta")
+def assinar_senha_incorreta(context):
+    _envio(context).tentar_assinar_com_senha_incorreta()
+
+
+@then("devo ver a mensagem de senha inválida")
+def validar_senha_invalida(context):
+    _envio(context).validar_senha_invalida()
+
+
 # --- Substituição de documento ---
 
 @when("substituo o arquivo do documento")

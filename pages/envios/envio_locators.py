@@ -173,6 +173,22 @@ MSG_REAPROVEITAMENTO_SUCESSO = (
     "and contains(., 'sucesso')]",
 )
 
+# Cenários de erro
+ALERTA_LIMITE_UPLOAD = (
+    By.XPATH,
+    "//*[@id='resultUp' and contains(@class,'alert-danger')]",
+)
+MODAL_SEM_SIGNATARIO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//*[contains(normalize-space(.), 'pelo menos um signat')]",
+)
+MSG_SENHA_INVALIDA = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//*[contains(normalize-space(.), 'Senha inv')]",
+)
+
 # Substituição de documento
 BTN_SUBSTITUIR_DOC = (By.ID, "substitute_doc")
 FILE_SUBSTITUIR = (By.ID, "filereupload")

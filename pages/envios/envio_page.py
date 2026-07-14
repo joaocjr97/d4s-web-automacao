@@ -332,6 +332,90 @@ class EnvioPage(BasePage):
             f"Documento não está na fase enviado. Status: {status!r}"
         )
 
+    # --- Cenários de erro ---
+
+    def _gerar_arquivo_acima_do_limite(self) -> str:
+        caminho = Config.reports_dir() / "arquivo-grande.pdf"
+        tamanho_alvo = 21 * 1024 * 1024
+        if not caminho.exists() or caminho.stat().st_size < tamanho_alvo:
+            with open(caminho, "wb") as arquivo:
+                arquivo.write(b"%PDF-1.4\n")
+                arquivo.write(b"0" * tamanho_alvo)
+        return str(caminho)
+
+    def _fechar_modal_ativo(self) -> None:
+        for botao in self.driver.find_elements(
+            By.CSS_SELECTOR, ".modal.in button.close"
+        ):
+            if botao.is_displayed():
+                self.execute_script("arguments[0].click();", botao)
+                self.pause(1)
+                return
+
+    def tentar_upload_acima_do_limite(self) -> None:
+        arquivo = self._gerar_arquivo_acima_do_limite()
+        self.dismiss_blocking_modals()
+        self.wait_clickable(L.BOTAO_ENVIO).click()
+        self.wait_visible(L.SELECT_COFRE)
+        self.select_by_index(L.SELECT_COFRE, COFRE_DESK_INDEX)
+        self.pause(2)
+        self.upload_file(L.FILE_UPLOAD, arquivo)
+
+    def validar_erro_limite_upload(self) -> None:
+        elemento = self.wait_visible(L.ALERTA_LIMITE_UPLOAD)
+        texto = (elemento.text or "").strip()
+        assert "20MB" in texto, f"Aviso de limite não exibido. Texto: {texto!r}"
+        # Sai do modal para não interferir no próximo cenário.
+        self.open(Config.desk_url())
+        self.pause(2)
+
+    def tentar_enviar_sem_signatario(self) -> None:
+        self._aguardar_documento_pronto()
+        assert not self._signatario_ja_na_lista(), (
+            "Documento já possui signatário; cenário exige lista vazia."
+        )
+        self.scroll_into_view(L.BOTAO_ASSINATURA)
+        self.js_click(L.BOTAO_ASSINATURA)
+
+    def validar_aviso_sem_signatario(self) -> None:
+        self.wait_visible(L.MODAL_SEM_SIGNATARIO)
+        self._fechar_modal_ativo()
+
+    def adicionar_signatario_com_email(self, email: str) -> None:
+        self._aguardar_documento_pronto()
+        if not self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=10):
+            self._clicar_incluir_email_signatario()
+        campo = self.wait_visible(L.CAMPO_EMAIL_SIGNATARIO)
+        campo.clear()
+        campo.send_keys(email)
+        self.pause(1)
+        for locator in (L.BTN_ADICIONAR_SIGNATARIO, L.BTN_ADICIONAR_SIGNATARIO_ALT):
+            if self.is_present(locator, timeout=3):
+                self.js_click(locator)
+                break
+        self.pause(3)
+        self._aguardar_barra_progresso()
+
+    def validar_nenhum_signatario_adicionado(self) -> None:
+        assert not self._signatario_ja_na_lista(), (
+            "Signatário inválido não deveria ter sido adicionado à lista."
+        )
+
+    def tentar_assinar_com_senha_incorreta(self) -> None:
+        self.incluir_signatario_por_email()
+        self.enviar_para_assinatura()
+        self._abrir_modal_assinatura()
+        self.type_text(L.SENHA_CONTA, "SenhaIncorreta123!")
+        self.safe_click(L.SALVAR_ASSINATURA, dismiss=False)
+
+    def validar_senha_invalida(self) -> None:
+        self.wait_visible(L.MSG_SENHA_INVALIDA)
+        campo = self.driver.find_element(*L.SENHA_CONTA)
+        assert campo.is_displayed(), (
+            "Modal de assinatura deveria continuar aberto após senha inválida."
+        )
+        self._fechar_modal_ativo()
+
     # --- Reaproveitamento ---
 
     def _elemento_visivel(self, locator: tuple[str, str]):
