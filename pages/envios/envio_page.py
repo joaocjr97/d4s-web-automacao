@@ -332,6 +332,55 @@ class EnvioPage(BasePage):
             f"Documento não está na fase enviado. Status: {status!r}"
         )
 
+    # --- Reaproveitamento ---
+
+    def _elemento_visivel(self, locator: tuple[str, str]):
+        for elemento in self.driver.find_elements(*locator):
+            if elemento.is_displayed():
+                return elemento
+        return None
+
+    def _confirmar_modal_reaproveitamento(self) -> None:
+        botao = WebDriverWait(self.driver, 30).until(
+            lambda driver: self._elemento_visivel(L.BTN_CONFIRMAR_REAPROVEITAMENTO)
+        )
+        self.execute_script("arguments[0].click();", botao)
+
+    def reaproveitar_documento(self) -> str:
+        """Reaproveita o documento aberto na viewblob e retorna a URL original."""
+        url_original = self.driver.current_url
+        self.dismiss_blocking_modals()
+        self.scroll_into_view(L.OPCOES_DOCUMENTO)
+        self.safe_click(L.OPCOES_DOCUMENTO, dismiss=False)
+        menu = self.wait_present(L.MENU_REAPROVEITAR)
+        self.execute_script("arguments[0].click();", menu)
+        self.wait_visible(L.MODAL_REAPROVEITAMENTO)
+        self.pause(2)
+
+        # Etapa 1 (explicação) só tem o botão Confirmar; o select aparece na etapa 2.
+        if self._elemento_visivel(L.SELECT_COFRE_REAPROVEITAMENTO) is None:
+            self._confirmar_modal_reaproveitamento()
+            self.pause(2)
+
+        select_cofre = WebDriverWait(self.driver, 30).until(
+            lambda driver: self._elemento_visivel(L.SELECT_COFRE_REAPROVEITAMENTO)
+        )
+        if not (select_cofre.get_attribute("value") or "").strip():
+            self.select_by_index(L.SELECT_COFRE_REAPROVEITAMENTO, 1)
+        self._confirmar_modal_reaproveitamento()
+
+        self.wait_visible(L.MSG_REAPROVEITAMENTO_SUCESSO)
+        return url_original
+
+    def validar_documento_reaproveitado(self, url_original: str) -> None:
+        WebDriverWait(self.driver, 90).until(
+            lambda driver: "viewblob" in (driver.current_url or "")
+            and driver.current_url != url_original
+        )
+        self.dismiss_blocking_modals()
+        self._documento_pronto_para_signatarios()
+        self.validar_aguardando_signatarios()
+
     # --- Template HTML ---
 
     def preencher_template_html(self) -> str:

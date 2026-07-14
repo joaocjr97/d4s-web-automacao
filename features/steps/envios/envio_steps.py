@@ -141,6 +141,20 @@ def validar_fase_enviado(context):
     _envio(context).validar_fase_enviado()
 
 
+# --- Reaproveitamento ---
+
+@when("reaproveito o documento para um cofre")
+def reaproveitar_documento(context):
+    context.url_documento_original = _envio(context).reaproveitar_documento()
+
+
+@then("um novo documento deve ser criado aguardando signatários")
+def validar_documento_reaproveitado(context):
+    page = _envio(context)
+    page.validar_documento_reaproveitado(context.url_documento_original)
+    _salvar_url_documento(context, context.driver.current_url)
+
+
 # --- Template HTML ---
 
 @when("preencho e salvo um template HTML no cofre")

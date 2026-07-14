@@ -9,8 +9,8 @@ Repositório: [Auditeste-Lab/d4sign-web-tests-behave](https://github.com/Audites
 | Área | Feature | Cenários |
 |------|---------|----------|
 | Login | `features/login/login.feature` | 7 |
-| Envios | desk, cofre, assinatura, grupo, template HTML, lote, powerform, pin, canvas | 14 |
-| **Total** | 10 features | **21** |
+| Envios | desk, cofre, assinatura, grupo, template HTML, lote, powerform, pin, canvas, reaproveitamento | 15 |
+| **Total** | 11 features | **22** |
 
 ## Estrutura
 

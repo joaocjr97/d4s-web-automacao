@@ -141,6 +141,38 @@ BTN_EMAIL = (By.ID, "fillerButton")
 BTN_SEND = (By.XPATH, '//*[@id="pfv2-result"]/button')
 BTN_SALVAR_POWER = (By.ID, "btnSalvarPower")
 
+# Reaproveitamento de documento
+OPCOES_DOCUMENTO = (
+    By.XPATH,
+    "//*[self::button or self::a]"
+    "[contains(normalize-space(.), 'Opções do documento')]",
+)
+MENU_REAPROVEITAR = (
+    By.XPATH,
+    "//a[contains(normalize-space(.), 'Reaproveitar Documento')]",
+)
+MODAL_REAPROVEITAMENTO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]"
+    "[.//*[contains(normalize-space(.), 'Reaproveitar Documento')]]",
+)
+SELECT_COFRE_REAPROVEITAMENTO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//select[@name='uuid-cofre']",
+)
+BTN_CONFIRMAR_REAPROVEITAMENTO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//button[normalize-space(.)='Confirmar']",
+)
+MSG_REAPROVEITAMENTO_SUCESSO = (
+    By.XPATH,
+    "//div[contains(@class,'modal') and contains(@class,'in')]//*["
+    "contains(translate(., 'REAPROVEITMN', 'reaproveitmn'), 'reaproveitamento') "
+    "and contains(., 'sucesso')]",
+)
+
 # Pin / canvas
 CARREGANDO_DOCUMENTO = (By.XPATH, '//*[@id="doc-div-principal"]/div/img')
 CARREGANDO_ANEXO = (By.XPATH, '//*[@id="progress"]/div')
