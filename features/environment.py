@@ -55,6 +55,34 @@ def _ci_log(message: str) -> None:
         print(message.encode("ascii", errors="replace").decode("ascii"), flush=True)
 
 
+def _embed_html_report(context, mime_type: str, data, caption: str) -> None:
+    """Anexa evidência ao step atual no report HTML (se o formatter estiver ativo)."""
+    runner = getattr(context, "_runner", None)
+    for formatter in getattr(runner, "formatters", []) or []:
+        if hasattr(formatter, "embedding"):
+            try:
+                formatter.embedding(mime_type, data, caption)
+            except Exception:
+                pass
+
+
+def _anexar_evidencias_falha(context, step) -> None:
+    import base64
+
+    try:
+        screenshot = context.evidence.capture_screenshot(context.driver, step.name)
+        imagem_b64 = base64.b64encode(screenshot.read_bytes()).decode("ascii")
+        _embed_html_report(context, "image/png", imagem_b64, "Screenshot da falha")
+    except Exception:
+        pass
+
+    try:
+        url = context.driver.current_url
+        _embed_html_report(context, "text/plain", f"URL: {url}", "URL no momento da falha")
+    except Exception:
+        pass
+
+
 def before_all(context):
     Config.load()
     context.config_obj = Config
@@ -97,7 +125,7 @@ def after_step(context, step):
         except Exception:
             pass
     if step.status == "failed" and Config.SCREENSHOT_ON_FAIL:
-        context.evidence.capture_screenshot(context.driver, step.name)
+        _anexar_evidencias_falha(context, step)
 
 
 def after_scenario(context, scenario):
