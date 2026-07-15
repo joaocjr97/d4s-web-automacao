@@ -10,9 +10,26 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from behave.formatter.base import StreamOpener
+
 from recursos.utils.config import Config
 from recursos.utils.driver_factory import create_driver
 from recursos.utils.evidence import Evidence
+
+
+def _abrir_stream_em_utf8(self):
+    """No Windows o behave grava o report em cp1252, quebrando os acentos.
+
+    O HTML declara utf-8 no <meta>, então forçamos a escrita em UTF-8.
+    """
+    if not self.stream or self.stream.closed:
+        self.ensure_dir_exists(os.path.dirname(self.name))
+        self.stream = open(self.name, "w", encoding="utf-8")
+        self.should_close_stream = True
+    return self.stream
+
+
+StreamOpener.open = _abrir_stream_em_utf8
 
 # Registra step definitions (subpastas)
 import features.steps.login.login_steps as _login_steps  # noqa: F401
@@ -59,11 +76,19 @@ def _embed_html_report(context, mime_type: str, data, caption: str) -> None:
     """Anexa evidência ao step atual no report HTML (se o formatter estiver ativo)."""
     runner = getattr(context, "_runner", None)
     for formatter in getattr(runner, "formatters", []) or []:
-        if hasattr(formatter, "embedding"):
-            try:
-                formatter.embedding(mime_type, data, caption)
-            except Exception:
-                pass
+        if not hasattr(formatter, "embedding"):
+            continue
+        try:
+            formatter.embedding(mime_type, data, caption)
+            if mime_type.startswith("image/"):
+                span = formatter.actual["act_step_embed_span"]
+                imagens = span.findall("img")
+                if imagens:
+                    imagens[-1].set(
+                        "style", "display: block; max-width: 1024px; margin: 4px 0;"
+                    )
+        except Exception:
+            pass
 
 
 def _anexar_evidencias_falha(context, step) -> None:
