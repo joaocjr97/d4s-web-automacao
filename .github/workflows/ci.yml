@@ -58,10 +58,8 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p reports
+          # Sempre suíte completa, salvo filtro opcional no disparo manual.
           TAGS="${{ github.event.inputs.tags }}"
-          if [ -z "$TAGS" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
-            TAGS="@critical"
-          fi
           # Behave associa cada --format ao --outfile na mesma ordem.
           # progress precisa de "-" (stdout); senão o JSON fica vazio.
           CMD=(

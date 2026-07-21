@@ -58,7 +58,7 @@ behave --tags=@envio -f pretty
 # Smoke / críticos
 behave --tags=@critical -f pretty
 
-# Suíte completa (21 cenários)
+# Suíte completa (28 cenários)
 behave features/ -f pretty
 
 # Relatório HTML
@@ -72,7 +72,7 @@ behave features/ -f pretty -f html -o reports/behave_report.html
 | `@login` | Cenários de autenticação |
 | `@envio` | Fluxos de envio e assinatura |
 | `@signature` | Mantém sessão entre cenários da mesma feature |
-| `@smoke` / `@critical` | Execução rápida no CI |
+| `@smoke` / `@critical` | Subconjunto rápido (execução local opcional) |
 | `@ui` / `@regression` | Classificação de suíte |
 
 ## Variáveis de ambiente (.env)
@@ -103,7 +103,8 @@ Secrets: `USERNAME`, `PASSWORD`, `TOKEN_API`, `CRYPT_KEY`, `EMAIL_TESTE`
 
 Variable opcional: `ENVIRONMENT` (padrão `prod` → secure.d4sign.com.br)
 
-O workflow executa `@critical` no push e a suíte completa no disparo manual.
+O workflow executa **sempre a suíte completa** (28 cenários) em push, PR e disparo manual.
+No disparo manual, o campo Tags ainda permite filtrar (ex.: `@critical`, `@erro`); vazio = todos.
 
 Após a execução, a aba **Summary** do job exibe um relatório Markdown com:
 - total de passed/failed/skipped
