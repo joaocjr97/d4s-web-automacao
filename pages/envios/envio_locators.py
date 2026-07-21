@@ -185,8 +185,12 @@ MODAL_SEM_SIGNATARIO = (
 )
 MSG_SENHA_INVALIDA = (
     By.XPATH,
-    "//div[contains(@class,'modal') and contains(@class,'in')]"
-    "//*[contains(normalize-space(.), 'Senha inv')]",
+    "//div[contains(@class,'modal') and contains(@class,'in')]//*["
+    "contains(normalize-space(.), 'Senha inv') "
+    "or contains(normalize-space(.), 'Invalid password') "
+    "or contains(normalize-space(.), 'password is invalid') "
+    "or contains(normalize-space(.), 'incorrect password')"
+    "]",
 )
 
 # Substituição de documento

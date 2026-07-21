@@ -88,7 +88,19 @@ class LoginPage(BasePage):
             return False
         return self.is_present(self.LOGO_D4S, timeout=3)
 
-    def obter_mensagem_erro_login(self, timeout: int = 10) -> str:
+    # Mensagens reais observadas no CI (UI em inglês / Chrome en-US).
+    # Mantém equivalentes em PT para execução local.
+    MSG_LOGIN_INVALIDO = (
+        "Invalid email or password.",
+        "E-mail ou senha inválida.",
+    )
+    MSG_CAMPO_OBRIGATORIO = (
+        "please fill out this field",
+        "preencha este campo",
+        "please fill in this field",
+    )
+
+    def obter_mensagem_erro_login(self, timeout: int = 15) -> str:
         def mensagem_pronta(driver) -> bool:
             try:
                 elemento = driver.find_element(By.ID, "result")
@@ -96,8 +108,11 @@ class LoginPage(BasePage):
                 return False
             if not elemento.is_displayed():
                 return False
-            texto = elemento.text.strip()
-            return bool(texto) and texto.lower() != "carregando"
+            texto = (elemento.text or "").strip().lower()
+            if not texto:
+                return False
+            # Evita capturar estado intermediário (PT/EN).
+            return texto not in {"carregando", "loading"}
 
         try:
             WebDriverWait(self.driver, timeout).until(mensagem_pronta)
@@ -105,17 +120,29 @@ class LoginPage(BasePage):
         except Exception:
             return ""
 
+    def mensagem_erro_login_valida(self, mensagem_esperada: str | None = None) -> bool:
+        """Aceita a mensagem atual da UI (EN no CI) e equivalentes em PT."""
+        erro = self.obter_mensagem_erro_login()
+        if not erro:
+            return False
+        candidatas = list(self.MSG_LOGIN_INVALIDO)
+        if mensagem_esperada and mensagem_esperada not in candidatas:
+            candidatas.append(mensagem_esperada)
+        return any(c in erro for c in candidatas)
+
     def obter_mensagem_validacao_campo(self, locator: tuple[str, str]) -> str:
         element = self.wait_visible(locator)
         return (element.get_attribute("validationMessage") or "").strip()
 
     def campo_exibe_validacao_obrigatoria(self, locator: tuple[str, str]) -> bool:
-        mensagem = self.obter_mensagem_validacao_campo(locator)
-        return "preencha este campo" in mensagem.lower()
+        mensagem = self.obter_mensagem_validacao_campo(locator).lower()
+        return any(trecho in mensagem for trecho in self.MSG_CAMPO_OBRIGATORIO)
 
     def campo_exibe_validacao_email_invalido(self) -> bool:
-        mensagem = self.obter_mensagem_validacao_campo(self.EMAIL)
-        return "@" in mensagem
+        mensagem = self.obter_mensagem_validacao_campo(self.EMAIL).lower()
+        # Chrome EN: "Please include an '@' in the email address..."
+        # Chrome PT: "...inclua um '@' no endereço de e-mail..."
+        return "@" in mensagem or "email" in mensagem or "e-mail" in mensagem
 
     def usuario_esta_logado(self) -> bool:
         return self.is_present(self.LOGO_D4S, timeout=2)

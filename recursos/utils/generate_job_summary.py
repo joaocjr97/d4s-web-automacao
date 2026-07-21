@@ -144,9 +144,12 @@ def carregar_cenarios() -> list[dict]:
                                 }
                             )
                             if step_status == "failed" and not erro:
-                                erro = (
-                                    (step.get("result") or {}).get("error_message") or ""
-                                ).strip()
+                                erro_raw = (
+                                    step.get("result") or {}
+                                ).get("error_message") or ""
+                                if isinstance(erro_raw, list):
+                                    erro_raw = "\n".join(str(p) for p in erro_raw)
+                                erro = str(erro_raw).strip()
 
                         tags = [
                             t.get("name", t) if isinstance(t, dict) else str(t)

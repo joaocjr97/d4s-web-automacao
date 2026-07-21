@@ -74,9 +74,11 @@ def validar_painel_principal(context):
 
 @then('devo ver a mensagem de erro "{mensagem}"')
 def validar_mensagem_erro(context, mensagem):
+    # Valida pela mensagem real da UI (EN no CI; PT local).
     erro = context.login_page.obter_mensagem_erro_login()
-    assert mensagem in erro, (
-        f"Mensagem de erro esperada: {mensagem!r}. Obtida: {erro!r}."
+    assert context.login_page.mensagem_erro_login_valida(mensagem), (
+        f"Mensagem de erro esperada (PT/EN): {mensagem!r} "
+        f"ou 'Invalid email or password.'. Obtida: {erro!r}."
     )
 
 

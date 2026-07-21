@@ -15,14 +15,14 @@ Funcionalidade: Login na plataforma D4Sign
   Cenário: Login com senha incorreta
     Dado que acesso a página de login da D4Sign
     Quando realizo login com senha incorreta
-    Então devo ver a mensagem de erro "E-mail ou senha inválida."
+    Então devo ver a mensagem de erro "Invalid email or password."
     E não devo estar autenticado na plataforma
 
   @login
   Cenário: Login com usuário inexistente
     Dado que acesso a página de login da D4Sign
     Quando realizo login com usuário inexistente
-    Então devo ver a mensagem de erro "E-mail ou senha inválida."
+    Então devo ver a mensagem de erro "Invalid email or password."
     E não devo estar autenticado na plataforma
 
   @login
