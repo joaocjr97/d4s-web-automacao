@@ -308,14 +308,16 @@ class EnvioPage(BasePage):
         self.scroll_into_view(grupo)
         self.safe_click(grupo, dismiss=False)
         self.wait_visible(L.FILTRO_GRUPO)
+        # Contas de teste usam grupos com "Grupo" no nome; filtro curto casa PT/EN.
         self.type_text(L.FILTRO_GRUPO, "Grupo")
         selecionar = self._locator_selecionar_grupo()
         self.wait_visible(selecionar)
         self.safe_click(selecionar, dismiss=False)
         WebDriverWait(self.driver, 30).until(
-            lambda driver: "carregando" not in driver.find_element(
-                By.ID, "lista-assinatura"
-            ).text.lower()
+            lambda driver: not any(
+                termo in driver.find_element(By.ID, "lista-assinatura").text.lower()
+                for termo in ("carregando", "loading")
+            )
         )
         self.pause(1)
         self.reload()
@@ -475,7 +477,13 @@ class EnvioPage(BasePage):
         self.safe_click(L.BTN_SUBSTITUIR_DOC, dismiss=False)
         self.wait_present(L.FILE_SUBSTITUIR)
         self.upload_file(L.FILE_SUBSTITUIR, Config.doc_substituto_pdf())
-        self.wait_visible(L.MSG_SUBSTITUICAO_SUCESSO)
+        # Mensagem de sucesso (PT/EN) ou o próprio nome do arquivo já atualizado.
+        WebDriverWait(self.driver, 90).until(
+            EC.any_of(
+                EC.visibility_of_element_located(L.MSG_SUBSTITUICAO_SUCESSO),
+                EC.presence_of_element_located(L.NOME_DOC_SUBSTITUTO),
+            )
+        )
         return url_documento
 
     def validar_documento_substituido(self, url_documento: str) -> None:
@@ -485,14 +493,10 @@ class EnvioPage(BasePage):
                 EC.invisibility_of_element_located(L.MSG_SUBSTITUICAO_SUCESSO)
             )
         except Exception:
-            self.reload()
+            pass
 
-        nome_novo = (
-            By.XPATH,
-            "//*[contains(normalize-space(text()), 'doc-substituto')]",
-        )
         WebDriverWait(self.driver, 90).until(
-            EC.presence_of_element_located(nome_novo)
+            EC.presence_of_element_located(L.NOME_DOC_SUBSTITUTO)
         )
         assert self.driver.current_url == url_documento, (
             "A substituição deveria manter o mesmo documento (mesma URL). "

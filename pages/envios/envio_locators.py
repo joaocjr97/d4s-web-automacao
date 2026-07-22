@@ -60,10 +60,11 @@ ASSINATURA_CONCLUIDA = (
 )
 
 # Grupo de assinatura (viewblob — não confundir com menu /desk/grupoassinatura)
+# UI pode estar em PT ("Grupo") ou EN ("Group") no CI.
 GRUPO = (
     By.XPATH,
     "//*[@id='page-wrapper']/div[2]//a["
-    "contains(translate(normalize-space(.), 'GRUPO', 'grupo'), 'grupo') "
+    "(contains(normalize-space(.), 'Grupo') or contains(normalize-space(.), 'Group')) "
     "and not(contains(@href, 'grupoassinatura'))"
     "]",
 )
@@ -75,8 +76,9 @@ FILTRO_GRUPO = (By.ID, "filtro-grupos")
 SELECIONAR_GRUPO = (
     By.XPATH,
     "//*[@id='tabela-grupos']//tr[contains(@class,'grupo-row')]"
-    "[.//b[contains(translate(., 'GRUPO', 'grupo'), 'grupo')]]"
-    "//a[contains(normalize-space(.), 'Adicionar')]",
+    "[.//b[contains(translate(., 'GRUPO', 'grupo'), 'grupo') "
+    "or contains(translate(., 'GROUP', 'group'), 'group')]]"
+    "//a[contains(normalize-space(.), 'Adicionar') or contains(normalize-space(.), 'Add')]",
 )
 SELECIONAR_GRUPO_LEGADO = (
     By.XPATH,
@@ -141,20 +143,28 @@ BTN_EMAIL = (By.ID, "fillerButton")
 BTN_SEND = (By.XPATH, '//*[@id="pfv2-result"]/button')
 BTN_SALVAR_POWER = (By.ID, "btnSalvarPower")
 
-# Reaproveitamento de documento
+# Reaproveitamento de documento (PT local / EN no CI)
 OPCOES_DOCUMENTO = (
     By.XPATH,
-    "//*[self::button or self::a]"
-    "[contains(normalize-space(.), 'Opções do documento')]",
+    "//*[self::button or self::a]["
+    "contains(normalize-space(.), 'Opções do documento') "
+    "or contains(normalize-space(.), 'Document options')"
+    "]",
 )
 MENU_REAPROVEITAR = (
     By.XPATH,
-    "//a[contains(normalize-space(.), 'Reaproveitar Documento')]",
+    "//a["
+    "contains(normalize-space(.), 'Reaproveitar') "
+    "or contains(normalize-space(.), 'Reuse Document') "
+    "or contains(normalize-space(.), 'Reuse document')"
+    "]",
 )
 MODAL_REAPROVEITAMENTO = (
     By.XPATH,
     "//div[contains(@class,'modal') and contains(@class,'in')]"
-    "[.//*[contains(normalize-space(.), 'Reaproveitar Documento')]]",
+    "[.//*[contains(normalize-space(.), 'Reaproveitar') "
+    "or contains(normalize-space(.), 'Reuse Document') "
+    "or contains(normalize-space(.), 'Reuse document')]]",
 )
 SELECT_COFRE_REAPROVEITAMENTO = (
     By.XPATH,
@@ -164,13 +174,16 @@ SELECT_COFRE_REAPROVEITAMENTO = (
 BTN_CONFIRMAR_REAPROVEITAMENTO = (
     By.XPATH,
     "//div[contains(@class,'modal') and contains(@class,'in')]"
-    "//button[normalize-space(.)='Confirmar']",
+    "//button[normalize-space(.)='Confirmar' or normalize-space(.)='Confirm']",
 )
 MSG_REAPROVEITAMENTO_SUCESSO = (
     By.XPATH,
     "//div[contains(@class,'modal') and contains(@class,'in')]//*["
-    "contains(translate(., 'REAPROVEITMN', 'reaproveitmn'), 'reaproveitamento') "
-    "and contains(., 'sucesso')]",
+    "(contains(translate(., 'REAPROVEITMN', 'reaproveitmn'), 'reaproveitamento') "
+    "or contains(translate(., 'REUSE', 'reuse'), 'reuse')) "
+    "and (contains(translate(., 'SUCESO', 'suceso'), 'sucesso') "
+    "or contains(translate(., 'SUCCESS', 'success'), 'success'))"
+    "]",
 )
 
 # Cenários de erro
@@ -180,16 +193,19 @@ ALERTA_LIMITE_UPLOAD = (
 )
 MODAL_SEM_SIGNATARIO = (
     By.XPATH,
-    "//div[contains(@class,'modal') and contains(@class,'in')]"
-    "//*[contains(normalize-space(.), 'pelo menos um signat')]",
+    "//div[contains(@class,'modal') and contains(@class,'in')]//*["
+    "contains(normalize-space(.), 'pelo menos um signat') "
+    "or contains(normalize-space(.), 'at least one signat') "
+    "or contains(normalize-space(.), 'Add at least one')"
+    "]",
 )
 MSG_SENHA_INVALIDA = (
     By.XPATH,
     "//div[contains(@class,'modal') and contains(@class,'in')]//*["
     "contains(normalize-space(.), 'Senha inv') "
+    "or contains(normalize-space(.), 'Incorrect password') "
     "or contains(normalize-space(.), 'Invalid password') "
-    "or contains(normalize-space(.), 'password is invalid') "
-    "or contains(normalize-space(.), 'incorrect password')"
+    "or contains(normalize-space(.), 'password is invalid')"
     "]",
 )
 
@@ -199,8 +215,16 @@ FILE_SUBSTITUIR = (By.ID, "filereupload")
 MSG_SUBSTITUICAO_SUCESSO = (
     By.XPATH,
     "//div[contains(@class,'modal') and contains(@class,'in')]//*["
-    "contains(translate(., 'SUBSTIUDO', 'substiudo'), 'substituído') "
-    "and contains(., 'sucesso')]",
+    "(contains(translate(., 'SUBSTIUDO', 'substiudo'), 'substituído') "
+    "or contains(translate(., 'SUBSTITUTED', 'substituted'), 'substituted') "
+    "or contains(translate(., 'REPLACED', 'replaced'), 'replaced')) "
+    "and (contains(translate(., 'SUCESO', 'suceso'), 'sucesso') "
+    "or contains(translate(., 'SUCCESS', 'success'), 'success'))"
+    "]",
+)
+NOME_DOC_SUBSTITUTO = (
+    By.XPATH,
+    "//*[contains(normalize-space(.), 'doc-substituto')]",
 )
 
 # Pin / canvas
