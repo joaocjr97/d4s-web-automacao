@@ -1,0 +1,105 @@
+name: D4Sign Web Tests (Behave)
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Tags Behave (ex.: @smoke, @critical, @envio). Vazio = todos os cenários"
+        required: false
+        default: ""
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CI: "true"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Create .env from secrets
+        env:
+          ENVIRONMENT: ${{ vars.ENVIRONMENT || 'prod' }}
+          D4S_USERNAME: ${{ secrets.USERNAME }}
+          D4S_PASSWORD: ${{ secrets.PASSWORD }}
+          TOKEN_API: ${{ secrets.TOKEN_API }}
+          CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
+          EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
+          HEADLESS: "true"
+          RECORD_VIDEO: "true"
+          TIMEOUT: "360"
+        run: python recursos/utils/create_env_ci.py
+
+      - name: List scenarios (dry-run)
+        run: |
+          echo "=== Cenários planejados ==="
+          python -u -m behave features/ --dry-run --format progress
+          echo "==========================="
+
+      - name: Run Behave tests
+        id: behave
+        continue-on-error: true
+        run: |
+          mkdir -p reports
+          # Sempre suíte completa, salvo filtro opcional no disparo manual.
+          TAGS="${{ github.event.inputs.tags }}"
+          # Behave associa cada --format ao --outfile na mesma ordem.
+          # progress precisa de "-" (stdout); senão o JSON fica vazio.
+          CMD=(
+            python -u -m behave features/
+            --no-capture
+            --show-timings
+            --logging-level INFO
+            --format progress --outfile -
+            --format html --outfile reports/behave_report.html
+            --format json.pretty --outfile reports/behave.json
+          )
+          if [ -n "$TAGS" ]; then
+            CMD+=(--tags="$TAGS")
+          fi
+          echo "=== Início $(date -u +%H:%M:%S) UTC ==="
+          echo "Comando: ${CMD[*]}"
+          set -o pipefail
+          stdbuf -oL -eL "${CMD[@]}" 2>&1 | tee reports/behave_console.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "=== Fim $(date -u +%H:%M:%S) UTC | exit=${EXIT_CODE} ==="
+          ls -la reports/ || true
+          if [ ! -s reports/behave.json ]; then
+            echo "AVISO: reports/behave.json vazio ou ausente"
+          fi
+          echo "exit_code=${EXIT_CODE}" >> "$GITHUB_OUTPUT"
+          exit "${EXIT_CODE}"
+
+      - name: Generate Job Summary
+        if: always()
+        run: python recursos/utils/generate_job_summary.py
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behave-reports
+          path: reports/
+
+      - name: Fail if tests failed
+        if: always()
+        run: |
+          if [ "${{ steps.behave.outcome }}" != "success" ]; then
+            echo "Testes Behave falharam."
+            exit 1
+          fi
