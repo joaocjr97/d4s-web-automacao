@@ -182,7 +182,17 @@ class BasePage:
         self.page.mouse.click(box["x"] + x, box["y"] + y)
 
     def pause(self, seconds: float) -> None:
-        time.sleep(seconds)
+        """Espera processando eventos do Playwright.
+
+        ``time.sleep`` congelaria o loop interno da Sync API: propriedades de
+        cache como ``page.url`` só se atualizam quando alguma chamada ao
+        protocolo roda. Laços de espera que dormem e leem ``page.url`` nunca
+        enxergariam uma navegação feita pela própria página.
+        """
+        try:
+            self.page.wait_for_timeout(seconds * 1000)
+        except Exception:
+            time.sleep(seconds)
 
     def get_text(self, locator: str) -> str:
         return (self.wait_visible(locator).inner_text() or "").strip()

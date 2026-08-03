@@ -181,8 +181,8 @@ def after_step(context, step):
     driver = _obter_driver(context)
     if driver is None:
         return
-    # Frame de vídeo só em step com falha (cenários OK não geram evidência).
-    if Config.RECORD_VIDEO and step.status == "failed":
+    # Buffer rotativo: só vira MP4 se o cenário falhar; se passar, é descartado.
+    if Config.RECORD_VIDEO:
         try:
             context.evidence.capture_frame(driver)
         except Exception:

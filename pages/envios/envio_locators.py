@@ -152,17 +152,16 @@ BTN_CONFIRMAR_REAPROVEITAMENTO = (
     "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
     "//button[normalize-space(.)='Confirmar' or normalize-space(.)='Confirm']"
 )
+# Casar por texto aqui é traiçoeiro: o <script> do próprio modal contém a
+# frase de sucesso, então qualquer container ancestral casa antes do envio.
 MSG_REAPROVEITAMENTO_SUCESSO = (
-    "xpath=//div[contains(@class,'modal') and contains(@class,'in')]//*["
-    "(contains(translate(., 'REAPROVEITMN', 'reaproveitmn'), 'reaproveitamento') "
-    "or contains(translate(., 'REUSE', 'reuse'), 'reuse')) "
-    "and (contains(translate(., 'SUCESO', 'suceso'), 'sucesso') "
-    "or contains(translate(., 'SUCCESS', 'success'), 'success'))"
-    "]"
+    "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//div[@id='resultSuccess']"
 )
 
 # Cenários de erro
 ALERTA_LIMITE_UPLOAD = "xpath=//*[@id='resultUp' and contains(@class,'alert-danger')]"
+MODAL_ABERTO = "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
 MODAL_SEM_SIGNATARIO = (
     "xpath=//div[contains(@class,'modal') and contains(@class,'in')]//*["
     "contains(normalize-space(.), 'pelo menos um signat') "

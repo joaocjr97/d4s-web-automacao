@@ -375,11 +375,18 @@ class EnvioPage(BasePage):
         assert not self._signatario_ja_na_lista(), (
             "Documento já possui signatário; cenário exige lista vazia."
         )
+        self.dismiss_blocking_modals()
         self.scroll_into_view(L.BOTAO_ASSINATURA)
-        self.js_click(L.BOTAO_ASSINATURA)
+        # Popovers de onboarding sobre a viewblob às vezes engolem o 1º clique.
+        for _ in range(3):
+            self.js_click(L.BOTAO_ASSINATURA)
+            if self.is_present(L.MODAL_ABERTO, timeout=10):
+                return
+            self.dismiss_blocking_modals()
+        raise AssertionError("Nenhum modal abriu após clicar em enviar para assinatura.")
 
     def validar_aviso_sem_signatario(self) -> None:
-        self.wait_visible(L.MODAL_SEM_SIGNATARIO)
+        self.wait_visible(L.MODAL_SEM_SIGNATARIO, timeout=30)
         self._fechar_modal_ativo()
 
     def adicionar_signatario_com_email(self, email: str) -> None:
@@ -458,13 +465,9 @@ class EnvioPage(BasePage):
             self.select_by_index(L.SELECT_COFRE_REAPROVEITAMENTO, 1)
         self._confirmar_modal_reaproveitamento()
 
-        self.wait_visible(L.MSG_REAPROVEITAMENTO_SUCESSO)
-        # Após o sucesso a UI redireciona para o novo viewblob (pode demorar).
-        self.pause(3)
-        try:
-            self.page.keyboard.press("Escape")
-        except Exception:
-            pass
+        # A UI redireciona sozinha para o novo viewblob ~5s após esta mensagem.
+        # Fechar o modal antes disso cancela o redirecionamento.
+        self.wait_visible(L.MSG_REAPROVEITAMENTO_SUCESSO, timeout=90)
         return url_original
 
     def validar_documento_reaproveitado(self, url_original: str) -> None:
@@ -478,24 +481,12 @@ class EnvioPage(BasePage):
             return url.split("#")[0] != url_original.split("#")[0]
 
         try:
-            self.wait_until(
-                _novo_documento,
-                timeout=120,
-                message="Documento reaproveitado não abriu em nova URL viewblob.",
-            )
+            self.wait_until(_novo_documento, timeout=120)
         except TimeoutError:
-            # Fallback: recarrega / tenta fechar modal e espera de novo.
-            self.dismiss_blocking_modals()
-            try:
-                self.page.keyboard.press("Escape")
-            except Exception:
-                pass
-            self.pause(2)
-            if not _novo_documento():
-                raise TimeoutError(
-                    "Documento reaproveitado não abriu em nova URL viewblob. "
-                    f"Original: {url_original!r} | Atual: {self.driver.current_url!r}"
-                )
+            raise TimeoutError(
+                "Documento reaproveitado não abriu em nova URL viewblob. "
+                f"Original: {url_original!r} | Atual: {self.driver.current_url!r}"
+            ) from None
         self.dismiss_blocking_modals()
         self._documento_pronto_para_signatarios()
         self.validar_aguardando_signatarios()

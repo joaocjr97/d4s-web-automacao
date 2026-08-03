@@ -7,6 +7,11 @@ from typing import Any
 from recursos.utils.config import Config
 
 
+# Frames mantidos em disco por cenário: dá contexto do que levou à falha sem
+# acumular a suíte inteira, já que cenários que passam descartam tudo.
+MAX_FRAMES = 20
+
+
 def _status_falhou(status: Any) -> bool:
     texto = str(status).replace("Status.", "").lower()
     return texto in {"failed", "error"}
@@ -43,10 +48,9 @@ class Evidence:
     def start_scenario(self, scenario_name: str, driver: Any) -> None:
         self._scenario_slug = self._slug(scenario_name)
         self._frames = []
-        # Não captura frame no início: cenários que passam não geram evidência.
 
     def capture_frame(self, driver: Any) -> None:
-        """Captura frame para o vídeo de falha (chamado só em steps/cenários failed)."""
+        """Alimenta o buffer rotativo usado no vídeo caso o cenário falhe."""
         if Config.RECORD_VIDEO:
             self._capture_frame(driver)
 
@@ -63,8 +67,17 @@ class Evidence:
         try:
             self._screenshot(driver, str(path))
             self._frames.append(path)
+            self._descartar_frames_antigos()
         except Exception:
             pass
+
+    def _descartar_frames_antigos(self) -> None:
+        while len(self._frames) > MAX_FRAMES:
+            antigo = self._frames.pop(0)
+            try:
+                antigo.unlink(missing_ok=True)
+            except Exception:
+                pass
 
     def finish_scenario(self, driver: Any, status: str) -> None:
         """Gera MP4 apenas se o cenário falhou; em sucesso só limpa frames."""
