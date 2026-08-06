@@ -126,7 +126,19 @@ class BasePage:
         loc.fill(text)
 
     def upload_file(self, locator: str, file_path: str) -> None:
-        self.wait_present(locator).set_input_files(file_path)
+        loc = self.wait_present(locator)
+        loc.set_input_files(file_path)
+        # Alguns plugins (ex.: jQuery File Upload da D4Sign) só processam o
+        # arquivo depois do change/input — set_input_files às vezes não basta.
+        try:
+            loc.evaluate(
+                """el => {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                }"""
+            )
+        except Exception:
+            pass
 
     def is_visible(self, locator: str, timeout: int | None = None) -> bool:
         try:
@@ -197,6 +209,39 @@ class BasePage:
     def get_text(self, locator: str) -> str:
         return (self.wait_visible(locator).inner_text() or "").strip()
 
+    def _clicar_se_visivel(self, locator: str) -> bool:
+        try:
+            for el in self.page.locator(locator).all():
+                try:
+                    if not el.is_visible():
+                        continue
+                    try:
+                        el.click(timeout=1000)
+                    except Exception:
+                        el.evaluate("node => node.click()")
+                    return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
+
+    def _overlay_ia_visivel(self) -> bool:
+        seletores = (
+            "xpath=//*[contains(normalize-space(.), 'Inteligência Artificial da D4Sign')]",
+            "xpath=//*[contains(@class,'popover') or contains(@class,'introjs-tooltip') "
+            "or contains(@class,'shepherd-element') or contains(@class,'driver-popover')]"
+            "[.//button or .//a]",
+        )
+        for seletor in seletores:
+            try:
+                for el in self.page.locator(seletor).all():
+                    if el.is_visible():
+                        return True
+            except Exception:
+                continue
+        return False
+
     def dismiss_blocking_modals(self) -> None:
         """Fecha modais de aviso/IA sem destruir modais de upload em aberto."""
         for selector in (
@@ -204,35 +249,57 @@ class BasePage:
             "#modal-aviso-analizer button[data-dismiss='modal']",
             "#modal-aviso-analizer button.close",
         ):
-            try:
-                for el in self.page.locator(selector).all():
-                    try:
-                        if not el.is_visible():
-                            continue
-                        el.click(timeout=1000)
-                    except Exception:
-                        try:
-                            el.evaluate("node => node.click()")
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+            self._clicar_se_visivel(selector)
 
-        upload_aberto = self.is_present(self.FORM_UPLOAD, timeout=1)
+        upload_aberto = (
+            self.is_present(self.FORM_UPLOAD, timeout=0.5)
+            or self.is_present(
+                "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+                "[.//*[@id='fileupload' or @id='formUpload']]",
+                timeout=0.5,
+            )
+        )
+
+        # Tour/onboarding: fechar (X) / pular. NÃO usar Escape com upload aberto —
+        # Escape fecha o modal Bootstrap de envio.
+        if self._overlay_ia_visivel():
+            for selector in (
+                "xpath=//*[contains(@class,'popover') or contains(@class,'introjs') "
+                "or contains(@class,'shepherd') or contains(@class,'driver-popover') "
+                "or contains(@class,'onboard')]"
+                "//*[self::button or self::a]["
+                "contains(@class,'close') or @aria-label='Close' or @aria-label='Fechar' "
+                "or contains(normalize-space(.), 'Pular') "
+                "or contains(normalize-space(.), 'Skip') "
+                "or contains(normalize-space(.), '×') "
+                "or normalize-space(.)='x' or normalize-space(.)='X'"
+                "]",
+                "xpath=//button[contains(@class,'introjs-skipbutton') "
+                "or contains(@class,'shepherd-cancel-icon')]",
+            ):
+                if self._clicar_se_visivel(selector):
+                    break
+            if self._overlay_ia_visivel():
+                try:
+                    self.page.evaluate(
+                        """() => {
+                          document.querySelectorAll(
+                            '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
+                            + '.introjs-tooltip, .shepherd-modal-overlay-container, '
+                            + '.shepherd-element, .driver-popover, .driver-overlay'
+                          ).forEach(el => el.remove());
+                        }"""
+                    )
+                except Exception:
+                    pass
+            if not upload_aberto:
+                try:
+                    self.page.keyboard.press("Escape")
+                except Exception:
+                    pass
+
         if not upload_aberto:
-            try:
-                for el in self.page.locator(".modal-backdrop.in").all():
-                    try:
-                        if not el.is_visible():
-                            continue
-                        el.click(timeout=1000)
-                    except Exception:
-                        try:
-                            el.evaluate("node => node.click()")
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+            self._clicar_se_visivel(".modal-backdrop.in")
 
     def dismiss_modals_if_present(self) -> None:
         """Alias mantido para compatibilidade."""

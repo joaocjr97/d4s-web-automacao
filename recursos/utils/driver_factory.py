@@ -25,7 +25,12 @@ class BrowserDriver:
 
     @property
     def current_url(self) -> str:
-        return self.page.url
+        # page.url é cache; após navegação feita pela própria página, preferir
+        # location.href (força um round-trip no protocolo Sync).
+        try:
+            return self.page.evaluate("() => window.location.href")
+        except Exception:
+            return self.page.url
 
     def save_screenshot(self, path: str) -> bool:
         self.page.screenshot(path=path)

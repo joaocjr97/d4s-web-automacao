@@ -4,7 +4,15 @@
 BOTAO_ENVIO = 'xpath=//*[@id="drop-zone"]/a/p[2]'
 # Escopo no form de upload: há outros select[name=uuid-cofre] ocultos na desk.
 SELECT_COFRE = "#formUpload select[name='uuid-cofre'], .modal.in select[name='uuid-cofre']"
-FILE_UPLOAD = "#formUpload #fileupload, #fileupload"
+# Preferir input do modal aberto (há #fileupload ocultos na desk).
+FILE_UPLOAD = (
+    ".modal.in #fileupload, .modal.in #formUpload #fileupload, "
+    "#formUpload #fileupload, #fileupload"
+)
+FILE_UPLOAD_MODAL = (
+    "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+    "//input[@id='fileupload' or @type='file']"
+)
 AGUARDANDO_SIGNATARIOS = (
     'xpath=//*[@id="page-wrapper"]//span['
     'contains(translate(., "aguardno", "AGUARDNO"), "AGUARDANDO") and '
@@ -15,8 +23,11 @@ AGUARDANDO_SIGNATARIOS = (
 # Cofre
 COFRE_12 = 'xpath=//*[@id="liCofre_1414985"]/a'
 NOVO_ARQUIVO = "#label-new-file"
+BTN_NOVO_DOC = "#btnNovoDoc"
+# 1º item do dropdown "Novo documento" (Documento para assinatura).
 NEW_FILE = (
-    'xpath=//*[@id="page-wrapper"]/div[2]/div[2]/div[2]/div/div[1]/div[2]/ul/li[1]/a'
+    'xpath=//*[@id="btnNovoDoc"]/parent::*//ul[contains(@class,"dropdown-menu")]'
+    '//a[contains(@href, "enviarDocumento") or contains(@onclick, "enviarDocumento")]'
 )
 
 # Assinatura / envio
@@ -93,10 +104,26 @@ NOME_ENVIO = 'xpath=//*[@id="div_up"]/input'
 TIPO_DOC = 'xpath=//*[@id="div_up"]/select[4]'
 BTN_SALVAR_PF = "#btnSavePf"
 BTN_OPCAO = "#label-opcao-cofre"
-SELECIONAR_DOC = 'xpath=//*[@id="contratos"]/tbody/tr[1]/td[6]/div/ul/li[4]/a'
+SELECIONAR_DOC = (
+    'xpath=//*[@id="contratos"]/tbody/tr[1]//ul[contains(@class,"dropdown-menu")]//a['
+    'contains(translate(normalize-space(.), "SELECIONAR", "selecionar"), "selecionar") '
+    'or contains(translate(normalize-space(.), "SELECT", "select"), "select") '
+    'or contains(translate(normalize-space(.), "IMPORTAR", "importar"), "importar") '
+    'or contains(translate(normalize-space(.), "UPLOAD", "upload"), "upload")'
+    ']'
+)
+SELECIONAR_DOC_LEGADO = 'xpath=//*[@id="contratos"]/tbody/tr[1]/td[6]/div/ul/li[4]/a'
 SUCESSO = 'xpath=//*[@id="sucesso"]/h4'
-PROCESSAMENTO = 'xpath=//*[@id="contratos"]/tbody/tr[1]/td[6]/div/ul/li[8]/a'
-CAMPO_SENHA_LOTE = "#senhaConta"
+PROCESSAMENTO = (
+    'xpath=//*[@id="contratos"]/tbody/tr[1]//ul[contains(@class,"dropdown-menu")]//a['
+    'contains(translate(normalize-space(.), "PROCESSAR", "processar"), "processar") '
+    'or contains(translate(normalize-space(.), "PROCESSING", "processing"), "process")'
+    ']'
+)
+PROCESSAMENTO_LEGADO = (
+    'xpath=//*[@id="contratos"]/tbody/tr[1]/td[6]/div/ul/li[8]/a'
+)
+CAMPO_SENHA_LOTE = ".modal.in #senhaConta, #senhaConta"
 BTN_FIM = "#btnSalvarDocumento"
 TAG_PROCESSANDO = (
     "xpath=//small[contains(text(), 'SUBMITTED FOR PROCESSING')"
@@ -159,15 +186,43 @@ MSG_REAPROVEITAMENTO_SUCESSO = (
     "//div[@id='resultSuccess']"
 )
 
-# Cenários de erro
-ALERTA_LIMITE_UPLOAD = "xpath=//*[@id='resultUp' and contains(@class,'alert-danger')]"
+# Cenários de erro (PT local / EN no CI)
+ALERTA_LIMITE_UPLOAD = (
+    "xpath=//*[@id='resultUp' and contains(@class,'alert-danger')] "
+    "| //div[contains(@class,'modal') and contains(@class,'in')]"
+    "//*[contains(@class,'alert-danger')]"
+)
 MODAL_ABERTO = "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+MODAL_UPLOAD_COFRE = (
+    "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+    "[.//*[@id='fileupload' or @id='formUpload' or contains(., '20MB') "
+    "or contains(., '20 mb') or contains(., 'Choose document') "
+    "or contains(., 'Escolher documento')]]"
+)
 MODAL_SEM_SIGNATARIO = (
-    "xpath=//div[contains(@class,'modal') and contains(@class,'in')]//*["
-    "contains(normalize-space(.), 'pelo menos um signat') "
-    "or contains(normalize-space(.), 'at least one signat') "
-    "or contains(normalize-space(.), 'Add at least one')"
-    "]"
+    "xpath=("
+    "//div[contains(@class,'modal') and contains(@class,'in')]//*["
+    "contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂÉÊÍÓÔÕÚÇ', "
+    "'abcdefghijklmnopqrstuvwxyzáàãâéêíóôõúç'), 'pelo menos um signat') "
+    "or contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'at least one signat') "
+    "or contains(normalize-space(.), 'Add at least one') "
+    "or contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂÉÊÍÓÔÕÚÇ', "
+    "'abcdefghijklmnopqrstuvwxyzáàãâéêíóôõúç'), 'adicione pelo menos') "
+    "or contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂÉÊÍÓÔÕÚÇ', "
+    "'abcdefghijklmnopqrstuvwxyzáàãâéêíóôõúç'), 'nenhum signat')"
+    "] | "
+    "//*[contains(@class,'sweet-alert') or contains(@class,'swal2-popup') "
+    "or contains(@class,'toast') or contains(@class,'alertify')]"
+    "//*[contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂÉÊÍÓÔÕÚÇ', "
+    "'abcdefghijklmnopqrstuvwxyzáàãâéêíóôõúç'), 'pelo menos um signat') "
+    "or contains(translate(normalize-space(.), "
+    "'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'at least one signat')]"
+    ")"
 )
 MSG_SENHA_INVALIDA = (
     "xpath=//div[contains(@class,'modal') and contains(@class,'in')]//*["

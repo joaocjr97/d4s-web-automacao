@@ -1,3 +1,5 @@
+import time
+
 from pages.base_page import BasePage
 from pages.envios import envio_locators as L
 from recursos.utils.config import Config
@@ -174,46 +176,156 @@ class EnvioPage(BasePage):
         self.pause(1)
         self.dismiss_blocking_modals()
 
-    def _aguardar_upload_cofre_concluido(self, timeout: int = 150) -> bool:
+    def _aguardar_upload_cofre_concluido(self, timeout: int = 90) -> bool:
+        """Retorna True se a viewblob abriu; False se apareceu alerta ou esgotou."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if self._upload_cofre_teve_sucesso():
+                return True
+            if self._texto_alerta_upload():
+                return False
+            self.pause(0.5)
+        return False
+
+    def _upload_cofre_teve_sucesso(self) -> bool:
+        # Não usar AGUARDANDO_SIGNATARIOS aqui: a lista do cofre já mostra
+        # esse status em documentos antigos e gerava falso positivo.
         try:
-            self.wait_any_present(
-                L.VIEWBLOB,
-                L.VERIFICA_ASSINATURA,
-                L.AGUARDANDO_SIGNATARIOS,
-                L.CANVAS_1,
-                L.INCLUIR_EMAIL,
-                L.INCLUIR_EMAIL_LEGADO,
-                L.CAMPO_EMAIL_SIGNATARIO,
-                timeout=timeout,
-            )
-            return True
+            url = (self.page.evaluate("() => window.location.href") or "").lower()
         except Exception:
-            return False
+            url = (self.driver.current_url or "").lower()
+        if "viewblob" in url:
+            return True
+        return (
+            self.is_present(L.VIEWBLOB, timeout=0.3)
+            or self.is_present(L.CANVAS_1, timeout=0.3)
+            or self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=0.3)
+        )
+
+    def _texto_alerta_upload(self) -> str:
+        try:
+            for alerta in self.page.locator(L.ALERTA_LIMITE_UPLOAD).all():
+                if not alerta.is_visible():
+                    continue
+                texto = (alerta.inner_text() or "").strip()
+                if texto:
+                    return texto
+        except Exception:
+            pass
+        return ""
+
+    def _fechar_modal_upload_cofre(self) -> None:
+        self._fechar_modal_ativo()
+        try:
+            self.page.keyboard.press("Escape")
+        except Exception:
+            pass
+        self.pause(0.5)
+        self.dismiss_blocking_modals()
+        try:
+            self.wait_invisible(L.MODAL_UPLOAD_COFRE, timeout=5)
+        except Exception:
+            pass
+
+    def _abrir_modal_envio_cofre(self) -> None:
+        """Abre o modal de envio a partir do menu Novo documento do cofre."""
+        self.dismiss_blocking_modals()
+        if self.is_visible(L.MODAL_UPLOAD_COFRE, timeout=2):
+            return
+
+        botao = L.BTN_NOVO_DOC if self.is_present(L.BTN_NOVO_DOC, timeout=2) else L.NOVO_ARQUIVO
+        self.wait_visible(botao, timeout=30)
+        try:
+            self.wait_clickable(botao, timeout=15, retries=1).click()
+        except Exception:
+            self.js_click(botao)
+        self.pause(0.5)
+
+        # Clica só se o item do dropdown estiver visível (menu aberto).
+        try:
+            self.wait_clickable(L.NEW_FILE, timeout=10, retries=1).click()
+        except Exception:
+            try:
+                self.wait_clickable(botao, timeout=5, retries=1).click()
+                self.pause(0.5)
+            except Exception:
+                pass
+            # Fallback: dispara o mesmo eModalO do href, mesmo se o <a> estiver oculto.
+            self.wait_present(L.NEW_FILE, timeout=10).evaluate("el => el.click()")
+
+        self.wait_any_present(L.FILE_UPLOAD, L.MODAL_UPLOAD_COFRE, timeout=30)
+
+    def _enviar_arquivo_modal_cofre(self, file_path: str) -> None:
+        """Anexa o arquivo no modal do cofre (input direto + fallback file chooser)."""
+        self.dismiss_blocking_modals()
+        loc_upload = (
+            L.FILE_UPLOAD_MODAL
+            if self.is_present(L.FILE_UPLOAD_MODAL, timeout=3)
+            else L.FILE_UPLOAD
+        )
+        self.wait_present(loc_upload, timeout=30)
+        self.upload_file(loc_upload, file_path)
+        self.pause(2)
+        if self._upload_cofre_teve_sucesso() or self._texto_alerta_upload():
+            return
+
+        # Se o plugin não processou o set_input_files, usa o botão nativo.
+        botao = (
+            "xpath=//div[contains(@class,'modal') and contains(@class,'in')]"
+            "//*[self::button or self::a or self::label]"
+            "[contains(normalize-space(.), 'Escolher documento') "
+            "or contains(normalize-space(.), 'Choose document')]"
+        )
+        if not self.is_visible(botao, timeout=3):
+            return
+        try:
+            with self.page.expect_file_chooser(timeout=10000) as seletor:
+                self.page.locator(botao).first.click()
+            seletor.value.set_files(file_path)
+            self.pause(2)
+        except Exception:
+            pass
 
     def enviar_documento_pelo_cofre(self) -> str:
         self.abrir_cofre_12()
-        self.dismiss_blocking_modals()
-        self.wait_visible(L.NOVO_ARQUIVO)
-        try:
-            self.wait_clickable(L.NOVO_ARQUIVO).click()
-        except Exception:
-            self.js_click(L.NOVO_ARQUIVO)
-        self.safe_click(L.NEW_FILE, dismiss=False)
-        self.pause(4)
+        ultimo_alerta = ""
+        arquivo = Config.doc_testes_pdf()
 
         for tentativa in range(2):
-            self.wait_present(L.FILE_UPLOAD)
-            self.upload_file(L.FILE_UPLOAD, Config.doc_testes_pdf())
-            if self._aguardar_upload_cofre_concluido():
+            self.dismiss_blocking_modals()
+            self._fechar_modal_upload_cofre()
+            self._abrir_modal_envio_cofre()
+            # Não chamar dismiss com Escape aqui — fecha o modal de upload.
+            self.pause(1)
+            # Remove só overlays de tour sem fechar o modal Bootstrap.
+            if self._overlay_ia_visivel():
+                try:
+                    self.page.evaluate(
+                        """() => {
+                          document.querySelectorAll(
+                            '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
+                            + '.introjs-tooltip, .shepherd-modal-overlay-container, '
+                            + '.shepherd-element, .driver-popover, .driver-overlay'
+                          ).forEach(el => el.remove());
+                        }"""
+                    )
+                except Exception:
+                    pass
+            self._enviar_arquivo_modal_cofre(arquivo)
+
+            if self._aguardar_upload_cofre_concluido(timeout=90):
                 return self.driver.current_url
 
-            self.pause(3)
-            self.dismiss_blocking_modals()
-            if tentativa == 0 and self.is_present(L.NEW_FILE, timeout=3):
-                self.safe_click(L.NEW_FILE, dismiss=False)
-                self.pause(2)
+            ultimo_alerta = self._texto_alerta_upload()
+            self._fechar_modal_upload_cofre()
+            if tentativa == 0:
+                self.abrir_cofre_12()
 
-        raise AssertionError("Upload pelo cofre não concluiu.")
+        detalhe = f" Alerta: {ultimo_alerta!r}." if ultimo_alerta else ""
+        raise AssertionError(
+            "Upload pelo cofre não concluiu após 2 tentativas."
+            f"{detalhe} URL: {self.driver.current_url!r}"
+        )
 
     # --- Assinatura ---
 
@@ -366,7 +478,9 @@ class EnvioPage(BasePage):
 
     def validar_erro_limite_upload(self) -> None:
         texto = self.get_text(L.ALERTA_LIMITE_UPLOAD)
-        assert "20MB" in texto, f"Aviso de limite não exibido. Texto: {texto!r}"
+        assert "20" in texto.upper() and "MB" in texto.upper(), (
+            f"Aviso de limite não exibido. Texto: {texto!r}"
+        )
         # Sai do modal para não interferir no próximo cenário (@signature).
         self._garantir_desk_limpa()
 
@@ -378,16 +492,25 @@ class EnvioPage(BasePage):
         self.dismiss_blocking_modals()
         self.scroll_into_view(L.BOTAO_ASSINATURA)
         # Popovers de onboarding sobre a viewblob às vezes engolem o 1º clique.
-        for _ in range(3):
-            self.js_click(L.BOTAO_ASSINATURA)
-            if self.is_present(L.MODAL_ABERTO, timeout=10):
-                return
+        # Só considera sucesso quando o aviso de "sem signatário" aparece
+        # (qualquer .modal.in pode ser tour/IA/outro e gerava falso positivo).
+        for _ in range(4):
             self.dismiss_blocking_modals()
-        raise AssertionError("Nenhum modal abriu após clicar em enviar para assinatura.")
+            self.js_click(L.BOTAO_ASSINATURA)
+            if self.is_visible(L.MODAL_SEM_SIGNATARIO, timeout=12):
+                return
+            if self.is_present(L.MODAL_ABERTO, timeout=2):
+                # Modal errado (ex.: onboarding) — fecha e tenta de novo.
+                self._fechar_modal_ativo()
+                self.dismiss_blocking_modals()
+        raise AssertionError(
+            "Aviso de 'pelo menos um signatário' não apareceu após clicar em enviar."
+        )
 
     def validar_aviso_sem_signatario(self) -> None:
         self.wait_visible(L.MODAL_SEM_SIGNATARIO, timeout=30)
         self._fechar_modal_ativo()
+        self.dismiss_blocking_modals()
 
     def adicionar_signatario_com_email(self, email: str) -> None:
         self._aguardar_documento_pronto()
@@ -594,6 +717,22 @@ class EnvioPage(BasePage):
             "Lote não está com status de processamento concluído."
         )
 
+    def _abrir_menu_opcoes_lote(self) -> None:
+        self.dismiss_blocking_modals()
+        self.wait_visible(L.BTN_OPCAO, timeout=30)
+        self.safe_click(L.BTN_OPCAO, dismiss=False)
+        self.pause(1)
+
+    def _clicar_opcao_lote(self, *locators: str) -> None:
+        for locator in locators:
+            if self.is_visible(locator, timeout=5):
+                self.safe_click(locator, dismiss=False)
+                return
+        # Menu pode ter fechado — reabre e tenta o primeiro locator.
+        self._abrir_menu_opcoes_lote()
+        self.wait_visible(locators[0], timeout=15)
+        self.safe_click(locators[0], dismiss=False)
+
     def enviar_lote(self) -> None:
         self.dismiss_blocking_modals()
         self.safe_click(L.LOTE)
@@ -606,20 +745,37 @@ class EnvioPage(BasePage):
         self.select_by_index(L.TIPO_DOC, 1)
         self.safe_click(L.BTN_SALVAR_PF, dismiss=False)
         self.pause(2)
-        self.safe_click(L.BTN_OPCAO, dismiss=False)
-        self.wait_visible(L.SELECIONAR_DOC)
-        self.safe_click(L.SELECIONAR_DOC, dismiss=False)
+        self._abrir_menu_opcoes_lote()
+        self._clicar_opcao_lote(L.SELECIONAR_DOC, L.SELECIONAR_DOC_LEGADO)
         self.pause(2)
-        self.upload_file(L.FILE_UPLOAD, Config.planilha_lote_xlsx())
+        loc_upload = (
+            L.FILE_UPLOAD_MODAL
+            if self.is_present(L.FILE_UPLOAD_MODAL, timeout=5)
+            else L.FILE_UPLOAD
+        )
+        self.upload_file(loc_upload, Config.planilha_lote_xlsx())
         self.pause(5)
         if self.is_present(L.SUCESSO, timeout=5):
             self._fechar_modal_sucesso_lote()
         self.reload()
-        self.safe_click(L.BTN_OPCAO, dismiss=False)
-        self.wait_visible(L.PROCESSAMENTO)
-        self.safe_click(L.PROCESSAMENTO, dismiss=False)
         self.pause(2)
-        self.wait_visible(L.CAMPO_SENHA_LOTE)
+
+        senha_ok = False
+        for _ in range(3):
+            self.dismiss_blocking_modals()
+            self._abrir_menu_opcoes_lote()
+            self._clicar_opcao_lote(L.PROCESSAMENTO, L.PROCESSAMENTO_LEGADO)
+            self.pause(2)
+            if self.is_visible(L.CAMPO_SENHA_LOTE, timeout=20):
+                senha_ok = True
+                break
+            self._fechar_modal_ativo()
+            self.dismiss_blocking_modals()
+        if not senha_ok:
+            raise AssertionError(
+                "Campo #senhaConta não apareceu após acionar processamento do lote."
+            )
+
         self.type_text(L.CAMPO_SENHA_LOTE, Config.PASSWORD)
         self.safe_click(L.BTN_FIM, dismiss=False)
         self.pause(3)
