@@ -1,6 +1,6 @@
 # D4Sign Web Tests — Behave + Playwright
 
-[![CI](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright/actions/workflows/ci.yml/badge.svg)](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright/actions/workflows/ci.yml)
+
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Behave](https://img.shields.io/badge/BDD-Behave-0B5FFF)](https://behave.readthedocs.io/)
 [![Playwright](https://img.shields.io/badge/browser-Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/python/)
