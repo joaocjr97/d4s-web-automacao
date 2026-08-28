@@ -12,4 +12,4 @@ reports/*
 .DS_Store
 *.log
 Thumbs.db
-.cursor
+.cursor/
