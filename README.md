@@ -39,7 +39,6 @@ Suíte de automação web da plataforma **D4Sign** com **Behave (BDD/Gherkin em 
 | Relatórios | HTML (`behave-html-formatter`), JSON, screenshots, vídeos MP4 |
 | CI | GitHub Actions (Python 3.12 + `playwright install chromium`) |
 
-> **Não usa Selenium.** O driver é uma sessão Playwright (`BrowserDriver`) exposta como `context.driver`.
 
 ---
 
