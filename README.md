@@ -9,10 +9,6 @@
 Suíte de automação web da plataforma **D4Sign** com **Behave (BDD/Gherkin em português)**, **Page Object Model** e **Playwright (sync API)**.
 
 
----
-
-**Novo no time?** Comece pelo [Guia de onboarding QA](docs/guia-onboarding-qa.md): camadas Gherkin/Playwright, onde mexer e como manter os testes.
-
 ## Sumário
 
 - [Guia de onboarding QA](docs/guia-onboarding-qa.md)
