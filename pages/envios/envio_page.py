@@ -168,13 +168,20 @@ class EnvioPage(BasePage):
 
     def abrir_cofre_12(self) -> None:
         self.dismiss_blocking_modals()
-        if not self.is_present(L.COFRE_12, timeout=5):
+        if not self.is_present(L.COFRE_TESTE, timeout=5):
             self.open(Config.desk_url())
             self.pause(2)
             self.dismiss_blocking_modals()
-        self.safe_click(L.COFRE_12)
+        self.safe_click(L.COFRE_TESTE)
         self.pause(1)
+        self._fechar_backdrop_troca_cofre()
         self.dismiss_blocking_modals()
+
+    def _fechar_backdrop_troca_cofre(self) -> None:
+        """Ao trocar de cofre surge um modal-backdrop que bloqueia 'Novo documento'
+        até ser dispensado (mesmo sem modal de aviso visível por cima)."""
+        self._clicar_se_visivel(".modal-backdrop")
+        self.pause(0.5)
 
     def _aguardar_upload_cofre_concluido(self, timeout: int = 90) -> bool:
         """Retorna True se a viewblob abriu; False se apareceu alerta ou esgotou."""
@@ -286,10 +293,45 @@ class EnvioPage(BasePage):
         except Exception:
             pass
 
-    def enviar_documento_pelo_cofre(self) -> str:
+    def _remover_overlay_ia_se_visivel(self) -> None:
+        """Remove só overlays de tour sem fechar o modal Bootstrap."""
+        if not self._overlay_ia_visivel():
+            return
+        try:
+            self.page.evaluate(
+                """() => {
+                  document.querySelectorAll(
+                    '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
+                    + '.introjs-tooltip, .shepherd-modal-overlay-container, '
+                    + '.shepherd-element, .driver-popover, .driver-overlay'
+                  ).forEach(el => el.remove());
+                }"""
+            )
+        except Exception:
+            pass
+
+    def _clicar_opcao_arquivo_grande(self) -> None:
+        """No modal do cofre, alterna para o modo de arquivos grandes antes do input."""
+        self.dismiss_blocking_modals()
+        link = (
+            L.LINK_ARQUIVO_GRANDE
+            if self.is_present(L.LINK_ARQUIVO_GRANDE, timeout=5)
+            else L.LINK_ARQUIVO_GRANDE_TEXTO
+        )
+        try:
+            self.wait_clickable(link, timeout=15).click()
+        except Exception:
+            self.js_click(link)
+        self.pause(1)
+
+    def _enviar_arquivo_grande_modal_cofre(self, file_path: str) -> None:
+        self._clicar_opcao_arquivo_grande()
+        self._enviar_arquivo_modal_cofre(file_path)
+
+    def _enviar_pelo_cofre(self, arquivo: str, anexar, timeout: int = 90) -> str:
+        """Fluxo comum de envio pelo cofre; ``anexar`` decide como anexar o arquivo."""
         self.abrir_cofre_12()
         ultimo_alerta = ""
-        arquivo = Config.doc_testes_pdf()
 
         for tentativa in range(2):
             self.dismiss_blocking_modals()
@@ -297,23 +339,10 @@ class EnvioPage(BasePage):
             self._abrir_modal_envio_cofre()
             # Não chamar dismiss com Escape aqui — fecha o modal de upload.
             self.pause(1)
-            # Remove só overlays de tour sem fechar o modal Bootstrap.
-            if self._overlay_ia_visivel():
-                try:
-                    self.page.evaluate(
-                        """() => {
-                          document.querySelectorAll(
-                            '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
-                            + '.introjs-tooltip, .shepherd-modal-overlay-container, '
-                            + '.shepherd-element, .driver-popover, .driver-overlay'
-                          ).forEach(el => el.remove());
-                        }"""
-                    )
-                except Exception:
-                    pass
-            self._enviar_arquivo_modal_cofre(arquivo)
+            self._remover_overlay_ia_se_visivel()
+            anexar(arquivo)
 
-            if self._aguardar_upload_cofre_concluido(timeout=90):
+            if self._aguardar_upload_cofre_concluido(timeout=timeout):
                 return self.driver.current_url
 
             ultimo_alerta = self._texto_alerta_upload()
@@ -327,6 +356,17 @@ class EnvioPage(BasePage):
             f"{detalhe} URL: {self.driver.current_url!r}"
         )
 
+    def enviar_documento_pelo_cofre(self) -> str:
+        return self._enviar_pelo_cofre(
+            Config.doc_testes_pdf(), self._enviar_arquivo_modal_cofre
+        )
+
+    def enviar_documento_grande_pelo_cofre(self) -> str:
+        # Arquivo bem maior (~60MB): upload real pela rede demora mais.
+        return self._enviar_pelo_cofre(
+            Config.doc_grande_pdf(), self._enviar_arquivo_grande_modal_cofre, timeout=240
+        )
+
     # --- Assinatura ---
 
     def incluir_signatario_por_email(self, url_documento: str | None = None) -> None:
@@ -334,7 +374,6 @@ class EnvioPage(BasePage):
         self._aguardar_documento_pronto()
         if self._signatario_ja_na_lista():
             return
-        self._clicar_incluir_email_signatario()
         self._adicionar_email_signatario()
         self.wait_clickable(L.BOTAO_ASSINATURA, timeout=60)
 

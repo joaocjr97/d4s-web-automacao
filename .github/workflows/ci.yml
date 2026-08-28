@@ -42,6 +42,7 @@ jobs:
           EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
           HEADLESS: "true"
           RECORD_VIDEO: "true"
+          TRACE_ON_FAIL: "true"
           TIMEOUT: "360"
         run: python recursos/utils/create_env_ci.py
 

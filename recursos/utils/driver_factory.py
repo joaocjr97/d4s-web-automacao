@@ -16,12 +16,14 @@ class BrowserDriver:
         browser: Browser,
         context: BrowserContext,
         page: Page,
+        tracing_enabled: bool = False,
     ) -> None:
         self._playwright = playwright
         self._browser = browser
         self._context = context
         self.page = page
         self.documento_url: str | None = None
+        self._tracing_enabled = tracing_enabled
 
     @property
     def current_url(self) -> str:
@@ -39,7 +41,30 @@ class BrowserDriver:
     def clear_cookies(self) -> None:
         self._context.clear_cookies()
 
+    def start_trace_chunk(self, title: str | None = None) -> None:
+        """Inicia um novo trecho de trace (1 por cenário) para o Trace Viewer."""
+        if not self._tracing_enabled:
+            return
+        try:
+            self._context.tracing.start_chunk(title=title)
+        except Exception:
+            pass
+
+    def stop_trace_chunk(self, path: str | None = None) -> None:
+        """Encerra o trecho de trace. Sem ``path``, o trecho é descartado."""
+        if not self._tracing_enabled:
+            return
+        try:
+            self._context.tracing.stop_chunk(path=path)
+        except Exception:
+            pass
+
     def quit(self) -> None:
+        if self._tracing_enabled:
+            try:
+                self._context.tracing.stop()
+            except Exception:
+                pass
         for closer in (self._context.close, self._browser.close, self._playwright.stop):
             try:
                 closer()
@@ -95,5 +120,16 @@ def create_driver(config: type[Config] = Config) -> BrowserDriver:
 
     context = browser.new_context(**context_kwargs)
     context.set_default_timeout((config.TIMEOUT or 30) * 1000)
+
+    # Tracing fica "armado" no context inteiro; os recortes por cenário são
+    # feitos via start_chunk/stop_chunk (ver BrowserDriver), assim cada
+    # cenário gera (ou descarta) seu próprio .zip do Trace Viewer.
+    tracing_enabled = bool(getattr(config, "TRACE_ON_FAIL", True))
+    if tracing_enabled:
+        try:
+            context.tracing.start(screenshots=True, snapshots=True, sources=True)
+        except Exception:
+            tracing_enabled = False
+
     page = context.new_page()
-    return BrowserDriver(playwright, browser, context, page)
+    return BrowserDriver(playwright, browser, context, page, tracing_enabled=tracing_enabled)

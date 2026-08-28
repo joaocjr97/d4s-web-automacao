@@ -129,6 +129,11 @@ def enviar_pelo_cofre(context):
     _envio(context).enviar_documento_pelo_cofre()
 
 
+@when("envio um arquivo grande pelo cofre")
+def enviar_arquivo_grande_pelo_cofre(context):
+    _envio(context).enviar_documento_grande_pelo_cofre()
+
+
 # --- Grupo ---
 
 @when("envio o documento para grupo de assinatura")

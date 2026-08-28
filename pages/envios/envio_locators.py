@@ -21,9 +21,20 @@ AGUARDANDO_SIGNATARIOS = (
 )
 
 # Cofre
-COFRE_12 = 'xpath=//*[@id="liCofre_1414985"]/a'
+# O antigo id fixo (liCofre_1414985, rótulo "12") ficou órfão na conta de
+# testes — clicar nele nunca revela "Novo documento". Uso um cofre por nome
+# em vez de id: "Berry-Moses" é único na lista e confirmadamente funcional.
+COFRE_TESTE = "xpath=//a[normalize-space(.)='Berry-Moses']"
 NOVO_ARQUIVO = "#label-new-file"
 BTN_NOVO_DOC = "#btnNovoDoc"
+# Alterna o modal de envio para o modo de arquivos grandes (acima do limite
+# padrão de upload). Precisa ser clicado antes do #fileupload.
+LINK_ARQUIVO_GRANDE = "#master_envios_geral > small:nth-child(7) > a"
+LINK_ARQUIVO_GRANDE_TEXTO = (
+    "xpath=//a[contains(normalize-space(.), 'Limite de 20MB') "
+    "or contains(normalize-space(.), '20MB limit') "
+    "or contains(normalize-space(.), '20 MB')]"
+)
 # 1º item do dropdown "Novo documento" (Documento para assinatura).
 NEW_FILE = (
     'xpath=//*[@id="btnNovoDoc"]/parent::*//ul[contains(@class,"dropdown-menu")]'

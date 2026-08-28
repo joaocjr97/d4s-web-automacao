@@ -12,8 +12,11 @@ Repositório: [Auditeste-Lab/d4sign-web-tests-playwright](https://github.com/Aud
 
 ---
 
+**Novo no time?** Comece pelo [Guia de onboarding QA](docs/guia-onboarding-qa.md): camadas Gherkin/Playwright, onde mexer e como manter os testes.
+
 ## Sumário
 
+- [Guia de onboarding QA](docs/guia-onboarding-qa.md)
 - [Stack](#stack)
 - [Cobertura](#cobertura)
 - [Estrutura do projeto](#estrutura-do-projeto)
@@ -89,12 +92,12 @@ template-web-tests-python/
 │       └── envio_locators.py   # Seletores Playwright (CSS / xpath=)
 ├── recursos/utils/
 │   ├── config.py               # .env → Config
-│   ├── driver_factory.py       # sync_playwright → BrowserDriver
-│   ├── evidence.py             # Screenshots + frames → MP4
+│   ├── driver_factory.py       # sync_playwright → BrowserDriver (+ tracing)
+│   ├── evidence.py             # Screenshots + frames → MP4 + caminho dos traces
 │   ├── create_env_ci.py        # Gera .env no CI a partir de secrets
 │   └── generate_job_summary.py # Summary do GitHub Actions
 ├── data/files/                 # PDF / XLSX usados nos uploads
-├── reports/                    # HTML, JSON, screenshots, videos (gitignored)
+├── reports/                    # HTML, JSON, screenshots, videos, traces (gitignored)
 ├── .github/workflows/ci.yml
 ├── behave.ini
 ├── requirements.txt
@@ -159,6 +162,7 @@ Copie de `.env.exemplo`. Variáveis principais:
 | `LOGIN_TIMEOUT` | `20` | Timeout específico do login |
 | `SCREENSHOT_ON_FAIL` | `true` | PNG em falha + embed no HTML |
 | `RECORD_VIDEO` | `true` | Vídeo MP4 **somente se o cenário falhar** |
+| `TRACE_ON_FAIL` | `true` | Trace do Playwright (`.zip`) **somente se o cenário falhar** — abra com o Trace Viewer |
 
 ### Ambientes D4Sign
 
@@ -242,7 +246,7 @@ Em headed (`HEADLESS=false`), o Chromium sobe **maximizado** e sem viewport emul
 2. **Steps** — orquestram pages; asserts nos `Then`  
 3. **Page Objects** — locators + ações de UI  
 4. **BasePage** — waits, click seguro, upload, dismiss de modais  
-5. **BrowserDriver** — wrapper Playwright (`page`, `current_url`, `save_screenshot`, `quit`)
+5. **BrowserDriver** — wrapper Playwright (`page`, `current_url`, `save_screenshot`, `start_trace_chunk`/`stop_trace_chunk`, `quit`)
 
 ### Regras
 
@@ -268,11 +272,30 @@ Em `.cursor/skills/`:
 |----------|------|--------|
 | Screenshot de falha | `reports/screenshots/` | Step/cenário failed + `SCREENSHOT_ON_FAIL=true` |
 | Vídeo MP4 | `reports/videos/` | Só em falha (`RECORD_VIDEO=true`) |
+| Trace Playwright (`.zip`) | `reports/traces/` | Só em falha (`TRACE_ON_FAIL=true`) |
 | Report HTML | `reports/behave_report.html` | Com `-f html -o ...` |
 | Report JSON | `reports/behave.json` | CI / formato json |
 | Log console | `reports/behave_console.log` | CI |
 
-No HTML, falhas podem embutir screenshot e URL do momento do erro.
+No HTML, falhas podem embutir screenshot, URL do momento do erro e o caminho do trace.
+
+### Playwright Trace Viewer
+
+Cada cenário grava seu próprio trecho de trace (via `context.tracing.start_chunk()` /
+`stop_chunk()`); se o cenário **falhar**, o trecho é exportado para
+`reports/traces/<cenário>_<timestamp>.zip` (cenários que passam descartam o trecho,
+sem gerar arquivo). O trace inclui screenshots, snapshots de DOM e código-fonte dos
+steps, permitindo depurar a falha passo a passo com timeline, rede e console.
+
+```bash
+# Abrir um trace específico
+playwright show-trace reports/traces/<arquivo>.zip
+
+# Ou arraste o .zip em https://trace.playwright.dev (sem instalar nada)
+```
+
+Desative com `TRACE_ON_FAIL=false` no `.env` se quiser suprimir a geração (ex.: execuções
+muito longas em que o overhead de tracing não compensa).
 
 ---
 
@@ -353,6 +376,7 @@ Arquivos em `data/files/`:
 | `doc-testes.pdf` | Upload padrão (desk / cofre / anexo) |
 | `doc-substituto.pdf` | Substituição de documento |
 | `planilha.xlsx` | Envio em lote |
+| `BIGFILE.pdf` | Envio de arquivo grande pelo cofre (~60MB) |
 
 ---
 

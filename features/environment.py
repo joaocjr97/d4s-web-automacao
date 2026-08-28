@@ -97,6 +97,29 @@ def _embed_html_report(context, mime_type: str, data, caption: str) -> None:
             pass
 
 
+def _finalizar_trace(context, driver, scenario) -> None:
+    """Encerra o trecho de trace do cenário: exporta .zip só em falha."""
+    if scenario.status == "failed" and Config.TRACE_ON_FAIL:
+        try:
+            trace_path = context.evidence.trace_path(scenario.name)
+            driver.stop_trace_chunk(path=str(trace_path))
+            _ci_log(f"    Trace: {trace_path}")
+            _embed_html_report(
+                context,
+                "text/plain",
+                f"Trace salvo em: {trace_path}\n"
+                f'Visualizar: playwright show-trace "{trace_path}"',
+                "Playwright Trace Viewer",
+            )
+        except Exception:
+            pass
+    else:
+        try:
+            driver.stop_trace_chunk()
+        except Exception:
+            pass
+
+
 def _anexar_evidencias_falha(context, step) -> None:
     import base64
 
@@ -175,6 +198,7 @@ def before_scenario(context, scenario):
             delattr(context, attr)
 
     context.evidence.start_scenario(scenario.name, context.driver)
+    context.driver.start_trace_chunk(title=scenario.name)
 
 
 def after_step(context, step):
@@ -203,6 +227,7 @@ def after_scenario(context, scenario):
             context.evidence.capture_screenshot(driver, scenario.name)
 
     if driver is not None:
+        _finalizar_trace(context, driver, scenario)
         context.evidence.finish_scenario(driver, scenario.status)
 
     if getattr(context, "_manter_sessao", False):

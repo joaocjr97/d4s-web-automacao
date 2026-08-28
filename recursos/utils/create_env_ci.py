@@ -17,6 +17,7 @@ OVERRIDES = {
     "EMAIL_TESTE": os.environ.get("EMAIL_TESTE", ""),
     "HEADLESS": os.environ.get("HEADLESS", "true"),
     "RECORD_VIDEO": os.environ.get("RECORD_VIDEO", "true"),
+    "TRACE_ON_FAIL": os.environ.get("TRACE_ON_FAIL", "true"),
     "TIMEOUT": os.environ.get("TIMEOUT", "360"),
 }
 

@@ -24,9 +24,11 @@ class Evidence:
         self._reports = Config.reports_dir()
         self._screenshots = self._reports / "screenshots"
         self._videos = self._reports / "videos"
+        self._traces = self._reports / "traces"
         self._frames_dir = self._reports / "_frames"
         self._screenshots.mkdir(parents=True, exist_ok=True)
         self._videos.mkdir(parents=True, exist_ok=True)
+        self._traces.mkdir(parents=True, exist_ok=True)
         self._frames_dir.mkdir(parents=True, exist_ok=True)
         self._frames: list[Path] = []
         self._scenario_slug = ""
@@ -60,6 +62,15 @@ class Evidence:
         path = self._screenshots / filename
         self._screenshot(driver, str(path))
         return path
+
+    def trace_path(self, scenario_name: str) -> Path:
+        """Caminho do .zip do trace (Playwright Trace Viewer) do cenário.
+
+        Não grava nada sozinho: quem exporta é ``BrowserDriver.stop_trace_chunk``.
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{self._slug(scenario_name)}_{timestamp}.zip"
+        return self._traces / filename
 
     def _capture_frame(self, driver: Any) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")

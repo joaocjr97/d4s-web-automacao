@@ -19,6 +19,7 @@ class Config:
     LOGIN_TIMEOUT: int = 20
     SCREENSHOT_ON_FAIL: bool = True
     RECORD_VIDEO: bool = True
+    TRACE_ON_FAIL: bool = True
 
     URLS = {
         "ghost": "https://ghost.d4sign.com.br/",
@@ -48,6 +49,7 @@ class Config:
         cls.LOGIN_TIMEOUT = int(os.getenv("LOGIN_TIMEOUT", "20"))
         cls.SCREENSHOT_ON_FAIL = os.getenv("SCREENSHOT_ON_FAIL", "true").lower() == "true"
         cls.RECORD_VIDEO = os.getenv("RECORD_VIDEO", "true").lower() == "true"
+        cls.TRACE_ON_FAIL = os.getenv("TRACE_ON_FAIL", "true").lower() == "true"
         cls._loaded = True
 
     @classmethod
@@ -81,6 +83,10 @@ class Config:
     @classmethod
     def planilha_lote_xlsx(cls) -> str:
         return cls.test_file("planilha.xlsx")
+
+    @classmethod
+    def doc_grande_pdf(cls) -> str:
+        return cls.test_file("BIGFILE.pdf")
 
     @classmethod
     def reports_dir(cls) -> Path:
