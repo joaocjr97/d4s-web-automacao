@@ -8,7 +8,6 @@
 
 Suíte de automação web da plataforma **D4Sign** com **Behave (BDD/Gherkin em português)**, **Page Object Model** e **Playwright (sync API)**.
 
-Repositório: [Auditeste-Lab/d4sign-web-tests-playwright](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright)
 
 ---
 
