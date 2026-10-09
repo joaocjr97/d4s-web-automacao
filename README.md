@@ -347,7 +347,7 @@ Workflow: `.github/workflows/ci.yml` (nome da pipeline: **Automação Web**)
 5. Dry-run + execução Behave (progress + HTML + JSON)  
 6. Job Summary + upload do artefato `behave-reports` (pasta `reports/` inteira)
 
-**Secrets:** `D4S_USERNAME`, `D4S_PASSWORD`, `TOKEN_API`, `CRYPT_KEY`, `EMAIL_TESTE`  
+**Secrets:** `USERNAME`, `PASSWORD`, `TOKEN_API`, `CRYPT_KEY`, `EMAIL_TESTE`. No workflow, `USERNAME` e `PASSWORD` entram no `.env` como `D4S_USERNAME` e `D4S_PASSWORD`.  
 **Variable:** `ENVIRONMENT` (opcional; usada em push/PR; padrão `prod`)
 
 No disparo manual (**Run workflow**), além do branch, há dois campos:

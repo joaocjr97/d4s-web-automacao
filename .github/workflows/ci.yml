@@ -66,8 +66,8 @@ jobs:
 
       - name: Create .env from secrets
         env:
-          D4S_USERNAME: ${{ secrets.D4S_USERNAME }}
-          D4S_PASSWORD: ${{ secrets.D4S_PASSWORD }}
+          D4S_USERNAME: ${{ secrets.USERNAME }}
+          D4S_PASSWORD: ${{ secrets.PASSWORD }}
           TOKEN_API: ${{ secrets.TOKEN_API }}
           CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
           EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
