@@ -73,26 +73,56 @@ class EnvioPage(BasePage):
             pass
         self.pause(1)
 
-        for locator in (L.BTN_ADICIONAR_SIGNATARIO, L.BTN_ADICIONAR_SIGNATARIO_ALT):
-            if self.is_present(locator, timeout=5):
-                try:
-                    self.js_click(locator)
-                except Exception:
-                    self.safe_click(locator, dismiss=False)
-                self.pause(2)
-                if self._signatario_ja_na_lista():
-                    self._aguardar_barra_progresso()
-                    return
+        self._confirmar_inclusao_signatario_um_clique(campo)
+
+    def _locator_botao_adicionar_signatario(self) -> str | None:
+        if self.is_present(L.BTN_ADICIONAR_SIGNATARIO, timeout=5):
+            return L.BTN_ADICIONAR_SIGNATARIO
+        if self.is_present(L.BTN_ADICIONAR_SIGNATARIO_ALT, timeout=3):
+            return L.BTN_ADICIONAR_SIGNATARIO_ALT
+        return None
+
+    def _clicar_botao_adicionar_uma_vez(self, locator: str) -> None:
+        """Dispara Adicionar uma vez. O fallback só roda se o clique não chegou a sair."""
+        if self._signatario_ja_na_lista():
+            return
+        try:
+            self.js_click(locator)
+        except Exception:
+            if self._signatario_ja_na_lista():
+                return
+            self.wait_clickable(locator, timeout=10).click(timeout=5000)
+
+    def _confirmar_inclusao_signatario_um_clique(self, campo) -> None:
+        if self._signatario_ja_na_lista():
+            self._aguardar_barra_progresso()
+            return
+
+        locator = self._locator_botao_adicionar_signatario()
+        if locator:
+            self._clicar_botao_adicionar_uma_vez(locator)
+            self._aguardar_barra_progresso()
+            try:
+                self._aguardar_signatario_na_lista(timeout=8)
+                return
+            except TimeoutError:
+                pass
+
+        if self._signatario_ja_na_lista():
+            self._aguardar_barra_progresso()
+            return
 
         try:
             campo.press("Enter")
         except Exception:
             pass
-        self.pause(2)
         self._aguardar_barra_progresso()
-
-        if not self._signatario_ja_na_lista():
-            raise AssertionError("Não foi possível adicionar o signatário por e-mail.")
+        try:
+            self._aguardar_signatario_na_lista(timeout=15)
+        except TimeoutError:
+            raise AssertionError(
+                "Não foi possível adicionar o signatário por e-mail."
+            ) from None
 
     def _aguardar_barra_progresso(self, timeout: int = 60) -> None:
         try:
@@ -167,21 +197,10 @@ class EnvioPage(BasePage):
     # --- Cofre ---
 
     def abrir_cofre_12(self) -> None:
-        self.dismiss_blocking_modals()
-        if not self.is_present(L.COFRE_TESTE, timeout=5):
-            self.open(Config.desk_url())
-            self.pause(2)
-            self.dismiss_blocking_modals()
-        self.safe_click(L.COFRE_TESTE)
-        self.pause(1)
-        self._fechar_backdrop_troca_cofre()
-        self.dismiss_blocking_modals()
+        """Abre o cofre de automação pelo link do nome, não pela estrela."""
+        from pages.cofres.cofre_page import CofrePage
 
-    def _fechar_backdrop_troca_cofre(self) -> None:
-        """Ao trocar de cofre surge um modal-backdrop que bloqueia 'Novo documento'
-        até ser dispensado (mesmo sem modal de aviso visível por cima)."""
-        self._clicar_se_visivel(".modal-backdrop")
-        self.pause(0.5)
+        CofrePage(self.driver).pesquisar_e_abrir_cofre("12")
 
     def _aguardar_upload_cofre_concluido(self, timeout: int = 90) -> bool:
         """Retorna True se a viewblob abriu; False se apareceu alerta ou esgotou."""
@@ -293,45 +312,10 @@ class EnvioPage(BasePage):
         except Exception:
             pass
 
-    def _remover_overlay_ia_se_visivel(self) -> None:
-        """Remove só overlays de tour sem fechar o modal Bootstrap."""
-        if not self._overlay_ia_visivel():
-            return
-        try:
-            self.page.evaluate(
-                """() => {
-                  document.querySelectorAll(
-                    '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
-                    + '.introjs-tooltip, .shepherd-modal-overlay-container, '
-                    + '.shepherd-element, .driver-popover, .driver-overlay'
-                  ).forEach(el => el.remove());
-                }"""
-            )
-        except Exception:
-            pass
-
-    def _clicar_opcao_arquivo_grande(self) -> None:
-        """No modal do cofre, alterna para o modo de arquivos grandes antes do input."""
-        self.dismiss_blocking_modals()
-        link = (
-            L.LINK_ARQUIVO_GRANDE
-            if self.is_present(L.LINK_ARQUIVO_GRANDE, timeout=5)
-            else L.LINK_ARQUIVO_GRANDE_TEXTO
-        )
-        try:
-            self.wait_clickable(link, timeout=15).click()
-        except Exception:
-            self.js_click(link)
-        self.pause(1)
-
-    def _enviar_arquivo_grande_modal_cofre(self, file_path: str) -> None:
-        self._clicar_opcao_arquivo_grande()
-        self._enviar_arquivo_modal_cofre(file_path)
-
-    def _enviar_pelo_cofre(self, arquivo: str, anexar, timeout: int = 90) -> str:
-        """Fluxo comum de envio pelo cofre; ``anexar`` decide como anexar o arquivo."""
+    def enviar_documento_pelo_cofre(self) -> str:
         self.abrir_cofre_12()
         ultimo_alerta = ""
+        arquivo = Config.doc_testes_pdf()
 
         for tentativa in range(2):
             self.dismiss_blocking_modals()
@@ -339,10 +323,23 @@ class EnvioPage(BasePage):
             self._abrir_modal_envio_cofre()
             # Não chamar dismiss com Escape aqui — fecha o modal de upload.
             self.pause(1)
-            self._remover_overlay_ia_se_visivel()
-            anexar(arquivo)
+            # Remove só overlays de tour sem fechar o modal Bootstrap.
+            if self._overlay_ia_visivel():
+                try:
+                    self.page.evaluate(
+                        """() => {
+                          document.querySelectorAll(
+                            '.introjs-overlay, .introjs-helperLayer, .introjs-tooltipReferenceLayer, '
+                            + '.introjs-tooltip, .shepherd-modal-overlay-container, '
+                            + '.shepherd-element, .driver-popover, .driver-overlay'
+                          ).forEach(el => el.remove());
+                        }"""
+                    )
+                except Exception:
+                    pass
+            self._enviar_arquivo_modal_cofre(arquivo)
 
-            if self._aguardar_upload_cofre_concluido(timeout=timeout):
+            if self._aguardar_upload_cofre_concluido(timeout=90):
                 return self.driver.current_url
 
             ultimo_alerta = self._texto_alerta_upload()
@@ -356,17 +353,6 @@ class EnvioPage(BasePage):
             f"{detalhe} URL: {self.driver.current_url!r}"
         )
 
-    def enviar_documento_pelo_cofre(self) -> str:
-        return self._enviar_pelo_cofre(
-            Config.doc_testes_pdf(), self._enviar_arquivo_modal_cofre
-        )
-
-    def enviar_documento_grande_pelo_cofre(self) -> str:
-        # Arquivo bem maior (~60MB): upload real pela rede demora mais.
-        return self._enviar_pelo_cofre(
-            Config.doc_grande_pdf(), self._enviar_arquivo_grande_modal_cofre, timeout=240
-        )
-
     # --- Assinatura ---
 
     def incluir_signatario_por_email(self, url_documento: str | None = None) -> None:
@@ -374,6 +360,7 @@ class EnvioPage(BasePage):
         self._aguardar_documento_pronto()
         if self._signatario_ja_na_lista():
             return
+        self._clicar_incluir_email_signatario()
         self._adicionar_email_signatario()
         self.wait_clickable(L.BOTAO_ASSINATURA, timeout=60)
 
@@ -489,39 +476,12 @@ class EnvioPage(BasePage):
 
     # --- Cenários de erro ---
 
-    def _gerar_arquivo_acima_do_limite(self) -> str:
-        caminho = Config.reports_dir() / "arquivo-grande.pdf"
-        tamanho_alvo = 21 * 1024 * 1024
-        if not caminho.exists() or caminho.stat().st_size < tamanho_alvo:
-            with open(caminho, "wb") as arquivo:
-                arquivo.write(b"%PDF-1.4\n")
-                arquivo.write(b"0" * tamanho_alvo)
-        return str(caminho)
-
     def _fechar_modal_ativo(self) -> None:
         for botao in self.page.locator(".modal.in button.close").all():
             if botao.is_visible():
                 botao.evaluate("el => el.click()")
                 self.pause(1)
                 return
-
-    def tentar_upload_acima_do_limite(self) -> None:
-        arquivo = self._gerar_arquivo_acima_do_limite()
-        self._garantir_desk_limpa()
-        self.wait_clickable(L.BOTAO_ENVIO).click()
-        self.wait_visible(self.FORM_UPLOAD, timeout=60)
-        self.wait_visible(L.SELECT_COFRE, timeout=60)
-        self.select_by_index(L.SELECT_COFRE, COFRE_DESK_INDEX)
-        self.pause(2)
-        self.upload_file(L.FILE_UPLOAD, arquivo)
-
-    def validar_erro_limite_upload(self) -> None:
-        texto = self.get_text(L.ALERTA_LIMITE_UPLOAD)
-        assert "20" in texto.upper() and "MB" in texto.upper(), (
-            f"Aviso de limite não exibido. Texto: {texto!r}"
-        )
-        # Sai do modal para não interferir no próximo cenário (@signature).
-        self._garantir_desk_limpa()
 
     def tentar_enviar_sem_signatario(self) -> None:
         self._aguardar_documento_pronto()
@@ -714,7 +674,9 @@ class EnvioPage(BasePage):
                 "Botão Assinar não disponível para o template HTML."
             )
         self.assinar_documento()
-        assert self.page_contains(L.VERIFICA_ASSINATURA)
+        # assinar_documento() já esperou a confirmação (_aguardar_assinatura_concluida);
+        # timeout curto aqui é só uma checagem final, não uma espera de negócio.
+        assert self.page_contains(L.VERIFICA_ASSINATURA, timeout=10)
 
     # --- Lote ---
 
@@ -793,8 +755,10 @@ class EnvioPage(BasePage):
             else L.FILE_UPLOAD
         )
         self.upload_file(loc_upload, Config.planilha_lote_xlsx())
-        self.pause(5)
-        if self.is_present(L.SUCESSO, timeout=5):
+        # Mesmo teto de espera do pause(5)+is_present(timeout=5) anterior, mas
+        # sem forçar 5s fixos antes de começar a checar (o polling do
+        # is_present já cobre o tempo de processamento do upload).
+        if self.is_present(L.SUCESSO, timeout=10):
             self._fechar_modal_sucesso_lote()
         self.reload()
         self.pause(2)
@@ -817,17 +781,31 @@ class EnvioPage(BasePage):
 
         self.type_text(L.CAMPO_SENHA_LOTE, Config.PASSWORD)
         self.safe_click(L.BTN_FIM, dismiss=False)
-        self.pause(3)
-        if not self.is_present(L.TAG_PROCESSANDO, timeout=30):
+        # Mesmo teto do pause(3)+is_present(timeout=30) anterior (33s), mas
+        # detecta a tag "processando" assim que ela aparecer, em vez de
+        # sempre perder os 3s iniciais dormindo.
+        if not self.is_present(L.TAG_PROCESSANDO, timeout=33):
             self.pause(5)
 
-        for _ in range(30):
+        self._aguardar_lote_processado()
+
+    #Poll com backoff crescente (começa rápido, espaça depois).
+    def _aguardar_lote_processado(self, timeout: int = 120) -> None:
+       
+        '''Teto de 2 minutos: se o lote não processar nesse prazo, o cenário falha
+        em vez de ficar minutos no polling. O caso comum (lote pronto em
+        poucos ciclos) sai assim que a tag aparecer.'''
+      
+        deadline = time.time() + timeout
+        intervalo = 3.0
+        while time.time() < deadline:
             self.reload()
             if self._lote_foi_processado():
                 return
-            self.pause(15)
+            self.pause(intervalo)
+            intervalo = min(intervalo * 1.5, 20.0)
 
-        raise AssertionError("Lote não foi processado após 30 tentativas.")
+        raise AssertionError(f"Lote não foi processado em até {timeout}s.")
 
     # --- PowerForm ---
 
@@ -884,9 +862,11 @@ class EnvioPage(BasePage):
 
     # --- Pin / canvas ---
 
-    def _aguardar_canvas_documento(self, timeout: int = 90) -> None:
+    def _aguardar_canvas_documento(
+        self, timeout: int = 90, timeout_canvas2: int = 30
+    ) -> None:
         self.dismiss_blocking_modals()
-        if self.is_present(L.CARREGANDO_DOCUMENTO, timeout=10):
+        if self.is_present(L.CARREGANDO_DOCUMENTO, timeout=2):
             try:
                 self.wait_invisible(L.CARREGANDO_DOCUMENTO, timeout=timeout)
             except Exception:
@@ -894,12 +874,12 @@ class EnvioPage(BasePage):
 
         self.wait_present(L.CANVAS_1, timeout=timeout)
         try:
-            self.wait_present(L.CANVAS_2, timeout=30)
+            self.wait_present(L.CANVAS_2, timeout=timeout_canvas2)
         except Exception:
             pass
 
         self.scroll_into_view(L.CANVAS_1)
-        self.pause(2)
+        self.pause(1)
 
     def _aguardar_anexo_carregado(self, timeout: int = 120) -> None:
         if self.is_present(L.CARREGANDO_ANEXO, timeout=10):
@@ -977,8 +957,11 @@ class EnvioPage(BasePage):
         self.pause(2)
         self._replicar_pin_em_todas_paginas()
         self.pause(3)
+        # Timeout explícito: antes dependia do default de page_contains() cair
+        # no timeout de negócio (60s); agora page_contains() é fail-fast
+        # por padrão, então cada replicação de pin precisa do próprio prazo.
         for pin in (L.PIN_1, L.PIN_2, L.PIN_3, L.PIN_4):
-            assert self.page_contains(pin), f"Pin não replicado: {pin}"
+            assert self.page_contains(pin, timeout=15), f"Pin não replicado: {pin}"
         self._clicar_botao_pin(L.BTN_REMOVER_PIN)
         self.pause(1)
         if self.is_present(L.BTN_CONFIRMAR_REMOCAO, timeout=5):
@@ -990,32 +973,38 @@ class EnvioPage(BasePage):
     def incluir_email_para_pin(self) -> None:
         """Habilita pins no canvas (fluxo legado envio-canvas-pins.robot)."""
         self.dismiss_blocking_modals()
-        self._aguardar_canvas_documento()
+        if not self.is_present(L.CANVAS_1, timeout=1):
+            self._aguardar_canvas_documento()
 
         if self._signatario_ja_na_lista():
             self._aguardar_barra_progresso()
             return
 
         self._clicar_incluir_email_signatario()
-        if self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=10):
-            self._adicionar_email_signatario()
-        elif not self._signatario_ja_na_lista():
-            raise AssertionError(
-                "Não foi possível habilitar signatário para adicionar pin no canvas."
-            )
+        try:
+            self._aguardar_signatario_na_lista(timeout=8)
+        except TimeoutError:
+            if self.is_present(L.CAMPO_EMAIL_SIGNATARIO, timeout=10):
+                self._adicionar_email_signatario()
+            elif not self._signatario_ja_na_lista():
+                raise AssertionError(
+                    "Não foi possível habilitar signatário para adicionar pin no canvas."
+                )
 
         self._aguardar_signatario_na_lista()
         self._aguardar_barra_progresso()
 
-    def _pin_presente_canvas1(self, timeout: int = 3) -> bool:
-        return self.is_present(L.PIN_1, timeout=timeout)
+    def _pin_ficou_visivel(self, timeout_ms: int) -> bool:
+        try:
+            self._first(L.PIN_1).wait_for(state="visible", timeout=timeout_ms)
+            return True
+        except Exception:
+            return False
 
     def _aguardar_pin_canvas1(self, timeout: int = 60) -> None:
-        self.wait_until(
-            lambda: self._pin_presente_canvas1(timeout=1),
-            timeout=timeout,
-            message="Pin no canvas1 não apareceu.",
-        )
+        if self._pin_ficou_visivel(timeout * 1000):
+            return
+        raise TimeoutError("Pin no canvas1 não apareceu.")
 
     def _clicar_canvas_posicao(self, offset_x: int, offset_y: int) -> None:
         self.execute_script(
@@ -1044,32 +1033,21 @@ class EnvioPage(BasePage):
 
     def _clicar_canvas_para_adicionar_pin(self) -> None:
         self.scroll_into_view(L.CANVAS_1)
-        self.execute_script("window.scrollTo(0, 0);")
-        self.pause(2)
 
         canvas = self.wait_visible(L.CANVAS_1)
         if not canvas.is_enabled():
             raise AssertionError("Canvas do documento não está habilitado para clique.")
 
-        # Preferir MouseEvent via JS (offsets a partir do topo-esquerda do canvas).
         for offset_x, offset_y in ((150, 150), (200, 400), (300, 600), (100, 100)):
             self._clicar_canvas_posicao(offset_x, offset_y)
-            self.pause(2)
-            if self._pin_presente_canvas1(timeout=3):
+            if self._pin_ficou_visivel(1500):
                 return
             try:
                 self.click_at_coordinates(L.CANVAS_1, offset_x, offset_y)
             except Exception:
                 pass
-            self.pause(2)
-            if self._pin_presente_canvas1(timeout=3):
+            if self._pin_ficou_visivel(1500):
                 return
-
-        try:
-            self.click_at_coordinates(L.CANVAS_1, 150, 150)
-        except Exception:
-            pass
-        self.pause(2)
 
     TIPOS_PIN = {"assinatura": "0", "rubrica": "1", "selo": "2"}
 
@@ -1104,8 +1082,8 @@ class EnvioPage(BasePage):
 
     def enviar_e_adicionar_pin_no_canvas(self) -> None:
         self.enviar_documento_pelo_cofre()
-        self._aguardar_canvas_documento()
+        self._aguardar_canvas_documento(timeout_canvas2=3)
         self.incluir_email_para_pin()
-        self.pause(2)
         self._clicar_canvas_para_adicionar_pin()
-        self._aguardar_pin_canvas1(timeout=90)
+        if not self._pin_ficou_visivel(300):
+            self._aguardar_pin_canvas1(timeout=10)

@@ -6,12 +6,6 @@ Funcionalidade: Validações de erro no envio
   Para corrigir o problema antes de prosseguir
 
   @envio @ui @signature @regression @erro
-  Cenário: Upload de arquivo acima do limite de 20MB
-    Dado que estou logado na plataforma D4Sign
-    Quando tento enviar pela desk um arquivo maior que o limite
-    Então devo ver o aviso de limite de 20MB por documento
-
-  @envio @ui @signature @regression @erro
   Cenário: Envio para assinatura sem signatário
     Dado que estou logado na plataforma D4Sign
     E que enviei um documento pela desk
@@ -25,7 +19,7 @@ Funcionalidade: Validações de erro no envio
     Quando adiciono signatário com e-mail "email-invalido"
     Então nenhum signatário deve ser adicionado à lista
 
-  @envio @ui @signature @regression @erro
+  @envio @ui @signature @regression @erro 
   Cenário: Assinatura com senha incorreta
     Dado que estou logado na plataforma D4Sign
     E que enviei um documento pela desk

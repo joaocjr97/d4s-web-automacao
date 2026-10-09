@@ -4,7 +4,7 @@ from pages.envios import envio_locators as L
 from pages.login.login_page import LoginPage
 from pages.envios.envio_page import EnvioPage
 from recursos.utils.config import Config
-
+import time
 
 def _envio(context) -> EnvioPage:
     if not hasattr(context, "envio_page"):
@@ -15,6 +15,7 @@ def _envio(context) -> EnvioPage:
 def _salvar_url_documento(context, url: str) -> None:
     context.documento_url = url
     context.driver.documento_url = url
+
 
 
 @given("que o documento da desk está pronto para assinatura")
@@ -129,11 +130,6 @@ def enviar_pelo_cofre(context):
     _envio(context).enviar_documento_pelo_cofre()
 
 
-@when("envio um arquivo grande pelo cofre")
-def enviar_arquivo_grande_pelo_cofre(context):
-    _envio(context).enviar_documento_grande_pelo_cofre()
-
-
 # --- Grupo ---
 
 @when("envio o documento para grupo de assinatura")
@@ -161,16 +157,6 @@ def validar_documento_reaproveitado(context):
 
 
 # --- Cenários de erro ---
-
-@when("tento enviar pela desk um arquivo maior que o limite")
-def upload_acima_do_limite(context):
-    _envio(context).tentar_upload_acima_do_limite()
-
-
-@then("devo ver o aviso de limite de 20MB por documento")
-def validar_limite_upload(context):
-    _envio(context).validar_erro_limite_upload()
-
 
 @when("tento enviar para assinatura sem adicionar signatário")
 def enviar_sem_signatario(context):

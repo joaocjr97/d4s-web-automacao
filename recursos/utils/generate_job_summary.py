@@ -52,6 +52,7 @@ def _categoria(feature_name: str, filename: str) -> str:
         "template": "Template",
         "lote": "Lote",
         "powerform": "PowerForm",
+        "embed": "Embed",
     }
     texto = f"{feature_name} {filename}".lower()
     for chave, nome in tags_map.items():
@@ -203,8 +204,11 @@ def gerar_markdown(cenarios: list[dict]) -> str:
         else f"`tests | {failed} failed`"
     )
 
+    ambiente = (os.getenv("ENVIRONMENT") or "prod").strip() or "prod"
     lines = [
-        "## Testes E2E (Behave) summary",
+        "## Automação Web summary",
+        "",
+        f"**Ambiente:** `{ambiente}`",
         "",
         f"**{passed} passed, {failed} failed and {skipped} skipped**",
         "",
@@ -213,7 +217,7 @@ def gerar_markdown(cenarios: list[dict]) -> str:
         "<details>",
         "<summary>Expand for details</summary>",
         "",
-        "### 🧪 Resultado dos testes E2E (Behave)",
+        "### 🧪 Resultado dos Automação Web",
         "",
     ]
 
@@ -299,7 +303,7 @@ def main() -> int:
     except Exception as exc:
         print(f"Falha ao gerar Job Summary: {exc}", file=sys.stderr)
         summary = (
-            "## Testes E2E (Behave) summary\n\n"
+            "## Testes Automação Web summary\n\n"
             f"❌ Não foi possível gerar o resumo: `{exc}`\n\n"
             "📎 Baixe o artefato `behave-reports` para análise manual.\n"
         )

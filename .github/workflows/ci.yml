@@ -1,4 +1,4 @@
-name: D4Sign Web Tests (Behave)
+name: Automação Web
 on:
   push:
     branches: [main, master]
@@ -6,6 +6,16 @@ on:
     branches: [main, master]
   workflow_dispatch:
     inputs:
+      environment:
+        description: "Ambientes disponíveis: prod, staging, homol e hotfix."
+        required: true
+        type: choice
+        default: prod
+        options:
+          - prod
+          - homol
+          - staging
+          - hotfix
       tags:
         description: "Tags Behave (ex.: @smoke, @critical, @envio). Vazio = todos os cenários"
         required: false
@@ -18,7 +28,27 @@ jobs:
     env:
       CI: "true"
       PYTHONUNBUFFERED: "1"
+      # Disparo manual usa o campo Ambiente. Push/PR usam a variable ENVIRONMENT (padrão prod).
+      ENVIRONMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || vars.ENVIRONMENT || 'prod' }}
     steps:
+      - name: Validar ambiente
+        run: |
+          AMBIENTE=$(printf '%s' "$ENVIRONMENT" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+          case "$AMBIENTE" in
+            prod|secure|homol|staging|stage|hotfix)
+              echo "Ambiente selecionado: ${AMBIENTE}"
+              echo "ENVIRONMENT=${AMBIENTE}" >> "$GITHUB_ENV"
+              ;;
+            ghost)
+              echo "::error::O ambiente ghost não entra nesta suíte. Escolha prod, homol, staging ou hotfix."
+              exit 1
+              ;;
+            *)
+              echo "::error::ENVIRONMENT inválido: ${AMBIENTE}. Use prod, homol, staging ou hotfix."
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - name: Setup Python
@@ -31,19 +61,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y xvfb
 
       - name: Create .env from secrets
         env:
-          ENVIRONMENT: ${{ vars.ENVIRONMENT || 'prod' }}
-          D4S_USERNAME: ${{ secrets.USERNAME }}
-          D4S_PASSWORD: ${{ secrets.PASSWORD }}
+          D4S_USERNAME: ${{ secrets.D4S_USERNAME }}
+          D4S_PASSWORD: ${{ secrets.D4S_PASSWORD }}
           TOKEN_API: ${{ secrets.TOKEN_API }}
           CRYPT_KEY: ${{ secrets.CRYPT_KEY }}
           EMAIL_TESTE: ${{ secrets.EMAIL_TESTE }}
-          HEADLESS: "true"
+          HEADLESS: "false"
           RECORD_VIDEO: "true"
-          TRACE_ON_FAIL: "true"
-          TIMEOUT: "360"
+          SCREENSHOT_ON_FAIL: "true"
+          TIMEOUT: "60"
+          ACTION_TIMEOUT: "30"
         run: python recursos/utils/create_env_ci.py
 
       - name: List scenarios (dry-run)
@@ -52,7 +84,7 @@ jobs:
           python -u -m behave features/ --dry-run --format progress
           echo "==========================="
 
-      - name: Run Behave tests
+      - name: Run feature tests
         id: behave
         continue-on-error: true
         run: |
@@ -76,7 +108,9 @@ jobs:
           echo "=== Início $(date -u +%H:%M:%S) UTC ==="
           echo "Comando: ${CMD[*]}"
           set -o pipefail
-          stdbuf -oL -eL "${CMD[@]}" 2>&1 | tee reports/behave_console.log
+          # Display virtual: o login passa no Chrome visível e fica em login.html
+          # no Chromium headless do runner.
+          stdbuf -oL -eL xvfb-run -a -s "-screen 0 1920x1080x24" "${CMD[@]}" 2>&1 | tee reports/behave_console.log
           EXIT_CODE=${PIPESTATUS[0]}
           echo "=== Fim $(date -u +%H:%M:%S) UTC | exit=${EXIT_CODE} ==="
           ls -la reports/ || true

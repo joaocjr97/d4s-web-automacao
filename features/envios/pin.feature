@@ -11,7 +11,7 @@ Funcionalidade: Pin no documento
     Quando envio documento com anexo e valido os canvas
     Então o documento deve estar aguardando signatários
 
-  @envio @ui @signature @critical @pin
+  @envio @ui @signature @critical @pin 
   Cenário: Replicação e remoção de pins em todas as páginas
     Dado que estou logado na plataforma D4Sign
     E que enviei documento com anexo no cofre

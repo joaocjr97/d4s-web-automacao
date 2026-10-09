@@ -11,7 +11,7 @@ Funcionalidade: Template HTML
     Quando preencho e salvo um template HTML no cofre
     Então o template HTML deve estar pronto para envio
 
-  @envio @ui @template @regression @signature
+  @envio @ui @template @regression @signature 
   Cenário: Envio do documento gerado para assinatura
     Dado que estou logado na plataforma D4Sign
     E que o template HTML foi preenchido e salvo

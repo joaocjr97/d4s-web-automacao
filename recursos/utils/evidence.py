@@ -17,8 +17,19 @@ def _status_falhou(status: Any) -> bool:
     return texto in {"failed", "error"}
 
 
+def _conectado(driver: Any) -> bool:
+    """Evita chamar screenshot/trace num navegador que já crashou (fica pendurado)."""
+    checar = getattr(driver, "is_connected", None)
+    if checar is None:
+        return True
+    try:
+        return bool(checar())
+    except Exception:
+        return False
+
+
 class Evidence:
-    """Evidências visuais: screenshot e vídeo **somente em falha**."""
+    """Evidências: screenshot, vídeo e trace do Playwright, por padrão só em falha."""
 
     def __init__(self) -> None:
         self._reports = Config.reports_dir()
@@ -32,6 +43,9 @@ class Evidence:
         self._frames_dir.mkdir(parents=True, exist_ok=True)
         self._frames: list[Path] = []
         self._scenario_slug = ""
+        self._trace_ativo = False
+        # Preenchido em finish_scenario quando um trace é salvo (não descartado).
+        self.ultimo_trace: Path | None = None
 
     @staticmethod
     def _slug(name: str) -> str:
@@ -50,29 +64,32 @@ class Evidence:
     def start_scenario(self, scenario_name: str, driver: Any) -> None:
         self._scenario_slug = self._slug(scenario_name)
         self._frames = []
+        self.ultimo_trace = None
+        self._trace_ativo = False
+        if Config.RECORD_TRACE and hasattr(driver, "start_trace_chunk"):
+            try:
+                driver.start_trace_chunk(self._scenario_slug)
+                self._trace_ativo = True
+            except Exception:
+                self._trace_ativo = False
 
     def capture_frame(self, driver: Any) -> None:
         """Alimenta o buffer rotativo usado no vídeo caso o cenário falhe."""
         if Config.RECORD_VIDEO:
             self._capture_frame(driver)
 
-    def capture_screenshot(self, driver: Any, scenario_name: str) -> Path:
+    def capture_screenshot(self, driver: Any, scenario_name: str) -> Path | None:
+        if not _conectado(driver):
+            return None
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{self._slug(scenario_name)}_{timestamp}.png"
         path = self._screenshots / filename
         self._screenshot(driver, str(path))
         return path
 
-    def trace_path(self, scenario_name: str) -> Path:
-        """Caminho do .zip do trace (Playwright Trace Viewer) do cenário.
-
-        Não grava nada sozinho: quem exporta é ``BrowserDriver.stop_trace_chunk``.
-        """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{self._slug(scenario_name)}_{timestamp}.zip"
-        return self._traces / filename
-
     def _capture_frame(self, driver: Any) -> None:
+        if not _conectado(driver):
+            return
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         path = self._frames_dir / f"{self._scenario_slug}_{timestamp}.png"
         try:
@@ -91,12 +108,38 @@ class Evidence:
                 pass
 
     def finish_scenario(self, driver: Any, status: str) -> None:
-        """Gera MP4 apenas se o cenário falhou; em sucesso só limpa frames."""
-        if Config.RECORD_VIDEO and _status_falhou(status):
+        """Gera MP4/trace se o cenário falhou, ou sempre que EVIDENCE_ALWAYS=true."""
+        if Config.RECORD_VIDEO and (_status_falhou(status) or Config.EVIDENCE_ALWAYS):
             self._capture_frame(driver)
             self._salvar_video(status)
 
         self._limpar_frames()
+        self._finalizar_trace(driver, status)
+
+    def _finalizar_trace(self, driver: Any, status: str) -> None:
+        if not self._trace_ativo:
+            return
+        self._trace_ativo = False
+
+        if not _conectado(driver):
+            # Navegador crashou: chamar tracing.stop_chunk agora ficaria
+            # pendurado esperando resposta de um processo morto.
+            self.ultimo_trace = None
+            return
+
+        salvar = _status_falhou(status) or Config.EVIDENCE_ALWAYS
+        path: Path | None = None
+        if salvar:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            status_txt = str(status).replace("Status.", "")
+            path = self._traces / f"{self._scenario_slug}_{status_txt}_{timestamp}.zip"
+
+        try:
+            if hasattr(driver, "stop_trace_chunk"):
+                driver.stop_trace_chunk(str(path) if path else None)
+                self.ultimo_trace = path
+        except Exception:
+            self.ultimo_trace = None
 
     def _limpar_frames(self) -> None:
         for frame in self._frames:

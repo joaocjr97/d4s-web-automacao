@@ -70,8 +70,39 @@ class LoginPage(BasePage):
         user = username or Config.USERNAME
         pwd = password or Config.PASSWORD
         self.tentar_login(username=user, password=pwd)
+        # Escape do dismiss, se rodar ainda em login.html, cancela o POST no CI
+        # (rede mais lenta que a máquina local) e a tela não sai do login.
+        self._aguardar_saida_do_login()
         self.dismiss_blocking_modals()
-        self.wait_visible(self.LOGO_D4S)
+        self.wait_visible(self.LOGO_D4S, timeout=Config.LOGIN_TIMEOUT)
+
+    def _aguardar_saida_do_login(self) -> None:
+        limite = max(Config.LOGIN_TIMEOUT, 30)
+
+        def saiu_ou_recusou() -> bool:
+            url = (self.page.url or "").lower()
+            if url and "/login" not in url:
+                return True
+            return self.is_visible(self.MSG_ERRO_LOGIN, timeout=0.3)
+
+        self.wait_until(
+            saiu_ou_recusou,
+            timeout=limite,
+            message=(
+                "Login não saiu da tela de entrada. "
+                f"URL atual: {self.page.url}"
+            ),
+        )
+        if "/login" in (self.page.url or "").lower():
+            erro = ""
+            try:
+                erro = (self.page.locator("#result").first.inner_text() or "").strip()
+            except Exception:
+                erro = ""
+            raise AssertionError(
+                "Login recusado e a tela permaneceu em login.html. "
+                f"Mensagem: {erro or '(sem mensagem visível)'} | URL: {self.page.url}"
+            )
 
     def fazer_login(self, username: str | None = None, password: str | None = None) -> None:
         self.abrir_pagina_login()
