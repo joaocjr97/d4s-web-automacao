@@ -615,13 +615,57 @@ class EnvioPage(BasePage):
 
     # --- Substituição de documento ---
 
+    def _abrir_campo_substituicao(self) -> None:
+        """Abre o modal até o campo de arquivo aparecer.
+
+        No máximo 3 cliques, todos dentro de 90 segundos. Se o modal abre
+        vazio, fecha e tenta de novo. A abertura que já traz o campo segue
+        na hora.
+        """
+        limite = time.monotonic() + 90
+        for tentativa in range(3):
+            if limite - time.monotonic() < 1:
+                break
+            if tentativa:
+                self.dismiss_blocking_modals()
+            self._clicar_substituir(limite)
+            faltam = 3 - tentativa
+            espera = (limite - time.monotonic()) / faltam
+            if espera <= 0:
+                break
+            if self.is_present(L.FILE_SUBSTITUIR, timeout=espera):
+                return
+        raise TimeoutError(
+            "O campo de substituição não apareceu em 1 minuto e meio. "
+            f"URL: {self.driver.current_url!r}"
+        )
+
+    def _clicar_substituir(self, limite: float) -> None:
+        folga = limite - time.monotonic()
+        if folga < 1 or not self.is_present(L.BTN_SUBSTITUIR_DOC, timeout=min(2, folga)):
+            return
+        try:
+            self._first(L.BTN_SUBSTITUIR_DOC).evaluate(
+                "el => el.scrollIntoView({block: 'center'})"
+            )
+        except Exception:
+            pass
+        timeout = max(1, min(4, int((limite - time.monotonic()) / 2) or 1))
+        try:
+            self.wait_clickable(
+                L.BTN_SUBSTITUIR_DOC, timeout=timeout, retries=1
+            ).click(timeout=3000)
+        except Exception:
+            try:
+                self._first(L.BTN_SUBSTITUIR_DOC).evaluate("el => el.click()")
+            except Exception:
+                pass
+
     def substituir_documento(self) -> str:
         """Substitui o arquivo do documento aberto na viewblob; retorna a URL."""
         url_documento = self.driver.current_url
         self.dismiss_blocking_modals()
-        self.scroll_into_view(L.BTN_SUBSTITUIR_DOC)
-        self.safe_click(L.BTN_SUBSTITUIR_DOC, dismiss=False)
-        self.wait_present(L.FILE_SUBSTITUIR)
+        self._abrir_campo_substituicao()
         self.upload_file(L.FILE_SUBSTITUIR, Config.doc_substituto_pdf())
         self.wait_any_present(
             L.MSG_SUBSTITUICAO_SUCESSO,
