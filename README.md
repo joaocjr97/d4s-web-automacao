@@ -227,7 +227,7 @@ behave features/ -f pretty -f html -o reports/behave_report.html
 ### Headless local
 
 No `.env`:
-
+ 
 ```env
 HEADLESS=true
 ```
