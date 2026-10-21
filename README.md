@@ -199,7 +199,7 @@ URLs derivadas: `/login.html` (login), `/desk` (desk) e `/embed/viewblob` (embed
 ```bash
 # Suíte completa (30 cenários)
 behave features/ -f pretty
-
+ 
 # Por tag
 behave --tags=@login -f pretty
 behave --tags=@envio -f pretty
