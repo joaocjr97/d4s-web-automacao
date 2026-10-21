@@ -193,7 +193,7 @@ URLs derivadas: `/login.html` (login), `/desk` (desk) e `/embed/viewblob` (embed
 ---
 
 ## Como executar
-
+  
 ### Comandos úteis
 
 ```bash
