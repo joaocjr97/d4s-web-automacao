@@ -132,8 +132,8 @@ template-web-tests-python/
 ## Instalação
 
 ```bash
-git clone https://github.com/Auditeste-Lab/d4sign-web-tests-playwright.git
-cd d4sign-web-tests-playwright
+git clone https://github.com/joaocjr97/d4s-web-automacao.git
+cd d4s-web-automacao
 
 python -m venv venv
 
