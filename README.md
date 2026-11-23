@@ -1,6 +1,6 @@
 # D4Sign Web Tests — Behave + Playwright
 
-[![CI](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright/actions/workflows/ci.yml/badge.svg)](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright/actions/workflows/ci.yml)
+[![CI](https://github.com/joaocjr97/d4s-web-automacao/actions/workflows/ci.yml/badge.svg)](https://github.com/joaocjr97/d4s-web-automacao/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Behave](https://img.shields.io/badge/BDD-Behave-0B5FFF)](https://behave.readthedocs.io/)
 [![Playwright](https://img.shields.io/badge/browser-Playwright-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/python/)
@@ -8,7 +8,7 @@
 
 Suíte de automação web da plataforma **D4Sign** com **Behave (BDD/Gherkin em português)**, **Page Object Model** e **Playwright (sync API)**.
 
-Repositório: [Auditeste-Lab/d4sign-web-tests-playwright](https://github.com/Auditeste-Lab/d4sign-web-tests-playwright)
+Repositório: [joaocjr97/d4s-web-automacao](https://github.com/joaocjr97/d4s-web-automacao)
 
 ---
 
@@ -73,7 +73,7 @@ Repositório: [Auditeste-Lab/d4sign-web-tests-playwright](https://github.com/Aud
 ## Estrutura do projeto
 
 ```
-template-web-tests-python/
+d4s-web-automacao/
 ├── features/
 │   ├── environment.py          # Hooks Behave (lifecycle Playwright, evidências, cache de login)
 │   ├── login/
@@ -280,13 +280,6 @@ Em headed (`HEADLESS=false`), o Chromium sobe **maximizado** e sem viewport emul
 - Antes de cliques críticos: `dismiss_modals_if_present()` / `dismiss_blocking_modals()`
 - Upload: `set_input_files` (não `send_keys` de Selenium)
 - Novo fluxo: `features/<domínio>/`, `features/steps/<domínio>/`, `pages/<domínio>/` (como `cofres/` e `embed/`)
-
-### Skills Cursor
-
-Em `.cursor/skills/`:
-
-- `automacao-web-qa` — criar features / pages / steps  
-- `migracao-automacao-qa` — migrar Robot Framework → Behave/Playwright  
 
 ---
 
